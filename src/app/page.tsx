@@ -83,12 +83,12 @@ export default function Home() {
         <section className="mx-auto max-w-6xl px-6 md:px-10 pt-12 pb-16 md:pt-20 md:pb-24 grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
           <motion.div variants={staggerContainer} initial="hidden" animate="show" className="max-w-xl">
             <motion.div variants={fadeUp} className="flex items-center gap-4 mb-8 md:hidden">
-               <div className="w-10 h-10 rounded-full bg-ice flex items-center justify-center font-display font-bold text-indigo text-lg">
-                 P
+               <div className="w-10 h-10 rounded-full bg-ice flex items-center justify-center text-indigo">
+                 <PlaneTakeoff className="w-5 h-5" />
                </div>
                <div>
                  <span className="font-mono text-xs tracking-widest text-ice uppercase block">Good evening</span>
-                 <h2 className="font-display text-2xl font-semibold mt-1">Where to, Perez?</h2>
+                 <h2 className="font-display text-2xl font-semibold mt-1">Where to next?</h2>
                </div>
             </motion.div>
             
@@ -97,7 +97,7 @@ export default function Home() {
                  Travel Synqed
                </motion.span>
                <motion.h1 variants={fadeUp} className="font-display text-4xl md:text-5xl lg:text-7xl font-semibold leading-[1.08] tracking-tight mb-4 md:mb-6">
-                 Where to, Perez?
+                 Where to next?
                </motion.h1>
                <motion.p variants={fadeUp} className="text-base md:text-lg leading-relaxed text-mist max-w-md">
                  We remove every source of friction from travel — before, during, and after the flight.
