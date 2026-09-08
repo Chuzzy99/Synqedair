@@ -104,47 +104,63 @@ export default function Home() {
                </motion.p>
             </div>
             
-            {/* AI Advisor Card */}
+            {/* Flight Search Widget */}
             <motion.div variants={fadeUp} className="mt-8 md:mt-12 bg-white rounded-3xl p-6 md:p-8 shadow-[0_20px_40px_-18px_rgba(0,0,0,0.6)]">
-              <div className="flex items-center gap-2 font-mono text-xs tracking-wider uppercase text-[#1C9BB8] mb-4">
-                <span className="w-2 h-2 rounded-full bg-ice animate-pulse-ring inline-block"></span>
-                AI Travel Advisor
-              </div>
               <h3 className="font-display text-xl md:text-2xl font-medium text-ink leading-snug mb-6">
-                "I have ₦500,000 — what's the cheapest way to Nairobi next month?"
+                Book your flight
               </h3>
               
-              <form onSubmit={handleSearch} className="flex items-center gap-3 bg-offwhite rounded-2xl p-2 pl-5 transition-all focus-within:ring-2 focus-within:ring-ice">
-                <input 
-                  type="text" 
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  disabled={loading}
-                  placeholder="Ask instead of searching..." 
-                  className="bg-transparent border-none outline-none flex-1 text-ink text-sm md:text-base placeholder:text-mist"
-                />
-                <button 
-                  type="submit" 
-                  disabled={loading || !query.trim()}
-                  className="w-10 h-10 md:w-12 h-12 rounded-xl bg-indigo flex items-center justify-center shrink-0 hover:bg-indigo2 transition-colors disabled:opacity-50"
-                >
-                  {loading ? <Loader2 className="w-5 h-5 text-ice animate-spin" /> : <ArrowRight className="w-5 h-5 text-ice" />}
-                </button>
-              </form>
-              
-              <div className="flex flex-wrap gap-2 mt-4 pb-2">
-                {["Best value", "No layovers", "Visa-free only", "Under ₦400k"].map(chip => (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!query.trim()) return;
+                  router.push(`/search?origin=${encodeURIComponent(query)}&destination=NBO`);
+                }} 
+                className="flex flex-col gap-4"
+              >
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">From</label>
+                    <input 
+                      type="text" 
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      disabled={loading}
+                      placeholder="e.g. Lagos (LOS)" 
+                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg placeholder:text-mist placeholder:font-normal"
+                    />
+                  </div>
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">To</label>
+                    <input 
+                      type="text" 
+                      defaultValue="Nairobi (NBO)"
+                      disabled={loading}
+                      placeholder="e.g. Nairobi (NBO)" 
+                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg placeholder:text-mist placeholder:font-normal"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex flex-col md:flex-row gap-4">
+                   <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Departure</label>
+                    <input 
+                      type="date" 
+                      defaultValue="2026-09-03"
+                      disabled={loading}
+                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg"
+                    />
+                  </div>
                   <button 
-                    key={chip} 
-                    type="button" 
-                    disabled={loading}
-                    onClick={() => { setQuery(chip); }}
-                    className="text-xs font-medium text-indigo bg-indigo/5 px-4 py-2 rounded-full whitespace-nowrap hover:bg-indigo/10 transition-colors"
+                    type="submit" 
+                    disabled={loading || !query.trim()}
+                    className="flex-1 rounded-2xl bg-indigo text-white font-semibold text-lg flex items-center justify-center gap-2 hover:bg-indigo2 transition-colors disabled:opacity-50 min-h-[60px]"
                   >
-                    {chip}
+                    {loading ? <Loader2 className="w-5 h-5 text-ice animate-spin" /> : <>Search Flights <ArrowRight className="w-5 h-5 text-ice" /></>}
                   </button>
-                ))}
-              </div>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
 

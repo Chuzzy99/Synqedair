@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     "Synqed Air finds and books flights on the routes diaspora travelers actually fly, with every fee shown before you pay.",
 };
 
+import FloatingSupportChat from "@/components/FloatingSupportChat";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -22,6 +24,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased">
         {children}
+        <FloatingSupportChat />
       </body>
     </html>
   );
