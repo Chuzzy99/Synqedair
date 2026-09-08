@@ -38,9 +38,10 @@ html {
 }
 
 body {
-  background: radial-gradient(circle at 15% 8%, #16224a 0%, #0a1128 55%, #05070f 100%);
+  background: radial-gradient(circle at 15% 8%, var(--indigo2) 0%, var(--indigo) 55%, #05070F 100%);
   color: var(--white);
   font-family: var(--font-body);
+  overflow-x: hidden;
 }
 
 ::selection {

@@ -56,8 +56,8 @@ export default function Home() {
       <Nav />
       
       {/* Background Constellation */}
-      <div className="absolute top-0 right-0 w-full h-[600px] pointer-events-none opacity-40 overflow-hidden flex justify-end">
-        <svg className="w-[800px] h-[600px] text-ice mr-[-100px] mt-[-50px]" viewBox="0 0 160 120" preserveAspectRatio="xMaxYMin slice">
+      <div className="absolute top-0 right-0 w-full max-w-[100vw] h-[600px] pointer-events-none opacity-40 overflow-hidden flex justify-end">
+        <svg className="w-[150%] max-w-[800px] h-auto md:w-[800px] md:h-[600px] text-ice mr-[-10%] md:mr-[-100px] mt-[-50px]" viewBox="0 0 160 120" preserveAspectRatio="xMaxYMin slice">
           <g stroke="currentColor" strokeWidth="0.6" opacity="0.4">
             <line x1="10" y1="15" x2="70" y2="45"/>
             <line x1="70" y1="45" x2="40" y2="80"/>
@@ -93,13 +93,13 @@ export default function Home() {
             </motion.div>
             
             <div className="hidden md:block">
-               <motion.span variants={fadeUp} className="font-mono text-sm tracking-widest text-ice uppercase mb-4 block">
+               <motion.span variants={fadeUp} className="font-mono text-xs md:text-sm tracking-widest text-ice uppercase mb-4 block">
                  Travel Synqed
                </motion.span>
-               <motion.h1 variants={fadeUp} className="font-display text-5xl lg:text-7xl font-semibold leading-[1.08] tracking-tight mb-6">
+               <motion.h1 variants={fadeUp} className="font-display text-4xl md:text-5xl lg:text-7xl font-semibold leading-[1.08] tracking-tight mb-4 md:mb-6">
                  Where to, Perez?
                </motion.h1>
-               <motion.p variants={fadeUp} className="text-lg leading-relaxed text-mist max-w-md">
+               <motion.p variants={fadeUp} className="text-base md:text-lg leading-relaxed text-mist max-w-md">
                  We remove every source of friction from travel — before, during, and after the flight.
                </motion.p>
             </div>
@@ -166,26 +166,26 @@ export default function Home() {
 
             <div className="flex flex-col gap-3">
               <motion.button variants={fadeUp} onClick={() => router.push('/search')} className="group flex justify-between items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all">
-                <div className="flex flex-col items-start gap-1">
+                <div className="flex flex-col items-start gap-1 w-2/3 md:w-auto">
                   <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md mb-1 bg-[#E8FBFF] text-[#1C9BB8]">Best value</span>
-                  <div className="font-display font-semibold text-base text-ink">Lagos → Nairobi</div>
-                  <div className="text-xs text-mist">Kenya Airways · 1 stop · 7h 40m</div>
+                  <div className="font-display font-semibold text-sm md:text-base text-ink whitespace-nowrap overflow-hidden text-ellipsis w-full">Lagos → Nairobi</div>
+                  <div className="text-[10px] md:text-xs text-mist">Kenya Airways · 1 stop · 7h 40m</div>
                 </div>
-                <div className="text-right">
-                  <b className="font-display text-lg text-ink block">₦387,200</b>
-                  <div className="text-[10px] uppercase tracking-wider text-mist mt-1 font-semibold">all-in</div>
+                <div className="text-right shrink-0">
+                  <b className="font-display text-base md:text-lg text-ink block">₦387,200</b>
+                  <div className="text-[9px] md:text-[10px] uppercase tracking-wider text-mist mt-1 font-semibold">all-in</div>
                 </div>
               </motion.button>
               
               <motion.button variants={fadeUp} onClick={() => router.push('/search')} className="group flex justify-between items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all">
-                <div className="flex flex-col items-start gap-1">
+                <div className="flex flex-col items-start gap-1 w-2/3 md:w-auto">
                   <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md mb-1 bg-[#E5E9FA] text-[#4152B0]">Fastest</span>
-                  <div className="font-display font-semibold text-base text-ink">Lagos → Kigali</div>
-                  <div className="text-xs text-mist">RwandAir · direct · 4h 30m</div>
+                  <div className="font-display font-semibold text-sm md:text-base text-ink whitespace-nowrap overflow-hidden text-ellipsis w-full">Lagos → Kigali</div>
+                  <div className="text-[10px] md:text-xs text-mist">RwandAir · direct · 4h 30m</div>
                 </div>
-                <div className="text-right">
-                  <b className="font-display text-lg text-ink block">₦468,900</b>
-                  <div className="text-[10px] uppercase tracking-wider text-mist mt-1 font-semibold">all-in</div>
+                <div className="text-right shrink-0">
+                  <b className="font-display text-base md:text-lg text-ink block">₦468,900</b>
+                  <div className="text-[9px] md:text-[10px] uppercase tracking-wider text-mist mt-1 font-semibold">all-in</div>
                 </div>
               </motion.button>
             </div>

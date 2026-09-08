@@ -53,18 +53,18 @@ export default function FlightOfferCard({
         {offer.stops === "Direct" ? `Direct · ${offer.duration}` : `${offer.stops} · ${offer.duration}`}
       </div>
 
-      <div className="flex justify-between gap-4 mt-4 pt-4 border-t border-dashed border-line">
-        <div className="text-[11px] text-mist">
+      <div className="flex justify-between flex-wrap gap-2 md:gap-4 mt-4 pt-4 border-t border-dashed border-line">
+        <div className="text-[10px] md:text-[11px] text-mist w-[30%] md:w-auto">
           Fare
-          <b className="block text-ink text-sm font-semibold mt-0.5">{formatCurrency(offer.price.baseFare)}</b>
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.price.baseFare)}</b>
         </div>
-        <div className="text-[11px] text-mist">
+        <div className="text-[10px] md:text-[11px] text-mist w-[30%] md:w-auto text-center md:text-left">
           Taxes
-          <b className="block text-ink text-sm font-semibold mt-0.5">{formatCurrency(offer.price.taxes)}</b>
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.price.taxes)}</b>
         </div>
-        <div className="text-[11px] text-mist">
+        <div className="text-[10px] md:text-[11px] text-mist w-[30%] md:w-auto text-right md:text-left">
           Bags
-          <b className="block text-ink text-sm font-semibold mt-0.5">{formatCurrency(offer.price.bags)}</b>
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.price.bags)}</b>
         </div>
       </div>
     </motion.button>
