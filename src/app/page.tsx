@@ -203,7 +203,7 @@ export default function Home() {
                     <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Departure</label>
                     <input 
                       type="date" 
-                      defaultValue="2026-09-03"
+                      defaultValue={new Date().toISOString().split('T')[0]}
                       disabled={loading}
                       className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg"
                     />
@@ -214,12 +214,23 @@ export default function Home() {
                       <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Return</label>
                       <input 
                         type="date" 
-                        defaultValue="2026-09-10"
+                        defaultValue={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                         disabled={loading}
                         className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg"
                       />
                     </div>
                   )}
+
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Travelers & Class</label>
+                    <select className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg cursor-pointer">
+                      <option>1 Adult, Economy</option>
+                      <option>2 Adults, Economy</option>
+                      <option>1 Adult, Business</option>
+                      <option>2 Adults, Business</option>
+                      <option>1 Adult, First</option>
+                    </select>
+                  </div>
 
                   <button 
                     type="submit" 
