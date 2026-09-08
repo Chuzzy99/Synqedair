@@ -40,13 +40,20 @@ export default function Home() {
     }
 
     // Fetch user's approximate location (state/region) based on IP
+    const cachedLocation = localStorage.getItem("synqed_last_location");
+    if (cachedLocation) {
+      setUserLocation(cachedLocation);
+    }
+
     fetch('https://ipapi.co/json/')
       .then(res => res.json())
       .then(data => {
         if (data && data.region) {
           setUserLocation(data.region);
+          localStorage.setItem("synqed_last_location", data.region);
         } else if (data && data.city) {
           setUserLocation(data.city);
+          localStorage.setItem("synqed_last_location", data.city);
         }
       })
       .catch(err => console.error("Could not fetch location automatically"));
