@@ -26,10 +26,16 @@ export default function Home() {
 
   // Dynamically set greeting based on user's local time (client-side only to avoid hydration mismatch)
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Good morning");
-    else if (hour < 18) setGreeting("Good afternoon");
-    else setGreeting("Good evening");
+    const hour = new Date().getHours(); // 0 to 23
+    if (hour < 12) {
+      setGreeting("Good morning");
+    } else if (hour >= 12 && hour < 16) {
+      setGreeting("Good afternoon");
+    } else if (hour >= 16 && hour < 20) {
+      setGreeting("Good evening");
+    } else {
+      setGreeting("Good day");
+    }
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
