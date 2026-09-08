@@ -188,6 +188,19 @@ export default function Home() {
                       className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg"
                     />
                   </div>
+                  
+                  {tripType === "Round trip" && (
+                    <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                      <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Return</label>
+                      <input 
+                        type="date" 
+                        defaultValue="2026-09-10"
+                        disabled={loading}
+                        className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg"
+                      />
+                    </div>
+                  )}
+
                   <button 
                     type="submit" 
                     disabled={loading || !query.trim()}
@@ -196,6 +209,12 @@ export default function Home() {
                     {loading ? <Loader2 className="w-5 h-5 text-ice animate-spin" /> : <>Search Flights <ArrowRight className="w-5 h-5 text-ice" /></>}
                   </button>
                 </div>
+
+                {tripType === "Multi-city" && (
+                  <button type="button" className="text-sm font-semibold text-[#1C9BB8] hover:text-[#157a91] text-left self-start mt-2 flex items-center gap-1">
+                    + Add another flight
+                  </button>
+                )}
               </form>
             </motion.div>
           </motion.div>
