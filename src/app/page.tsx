@@ -243,7 +243,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
           <div className="max-w-xl text-center md:text-left">
             <h2 className="font-display text-3xl md:text-4xl font-semibold mb-4 tracking-tight">
-              Get the Full Synqed Air Experience
+              Get the full travel experience
             </h2>
             <p className="text-ice/90 leading-relaxed mb-8">
               This website is perfect for booking flights, but the real magic happens in the app. Download the Synqed Air app to unlock our AI Travel Advisor, Smart Refund Assistant, and your personal Travel Companion for visas, weather, and real-time gate updates.
