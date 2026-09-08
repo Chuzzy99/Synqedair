@@ -11,9 +11,11 @@ export default function Nav() {
   return (
     <div className="bg-transparent relative z-50">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5 md:py-7 md:px-10 text-white relative z-50">
-        <Link href="/" className="font-display text-lg md:text-xl font-semibold tracking-tight text-white hover:opacity-80 transition-opacity">
-          {/* <!-- TODO: swap for Synqed Air logo asset --> */}
-          Synqed Air
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <img src="/logo.jpg" alt="Synqed Air Logo" className="w-8 h-8 md:w-10 md:h-10 rounded-lg object-cover" />
+          <span className="font-display text-lg md:text-xl font-semibold tracking-tight text-white hidden sm:block">
+            Synqed Air
+          </span>
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-[#AEB6CC] md:flex">
           <Link href="/about" className="transition-colors hover:text-white">
