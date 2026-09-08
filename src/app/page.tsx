@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import { motion, Variants } from "framer-motion";
 import { ArrowRight, Check, ShieldCheck, HeartHandshake, PlaneTakeoff, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { parseAdvisorQuery } from "@/lib/api";
 
 const staggerContainer: Variants = {
@@ -22,6 +22,15 @@ export default function Home() {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [greeting, setGreeting] = useState("Hello");
+
+  // Dynamically set greeting based on user's local time (client-side only to avoid hydration mismatch)
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 18) setGreeting("Good afternoon");
+    else setGreeting("Good evening");
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,12 +91,12 @@ export default function Home() {
         {/* Hero Section */}
         <section className="mx-auto max-w-6xl px-6 md:px-10 pt-12 pb-16 md:pt-20 md:pb-24 grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
           <motion.div variants={staggerContainer} initial="hidden" animate="show" className="max-w-xl">
-            <motion.div variants={fadeUp} className="flex items-center gap-4 mb-8 md:hidden">
+             <motion.div variants={fadeUp} className="flex items-center gap-4 mb-8 md:hidden">
                <div className="w-10 h-10 rounded-full bg-ice flex items-center justify-center text-indigo">
                  <PlaneTakeoff className="w-5 h-5" />
                </div>
                <div>
-                 <span className="font-mono text-xs tracking-widest text-ice uppercase block">Good evening</span>
+                 <span className="font-mono text-xs tracking-widest text-ice uppercase block">{greeting}</span>
                  <h2 className="font-display text-2xl font-semibold mt-1">Where to next?</h2>
                </div>
             </motion.div>
