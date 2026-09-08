@@ -23,6 +23,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [greeting, setGreeting] = useState("Hello");
+  const [tripType, setTripType] = useState("One way");
 
   // Dynamically set greeting based on user's local time (client-side only to avoid hydration mismatch)
   useEffect(() => {
@@ -121,9 +122,29 @@ export default function Home() {
             
             {/* Flight Search Widget */}
             <motion.div variants={fadeUp} className="mt-8 md:mt-12 bg-white rounded-3xl p-6 md:p-8 shadow-[0_20px_40px_-18px_rgba(0,0,0,0.6)]">
-              <h3 className="font-display text-xl md:text-2xl font-medium text-ink leading-snug mb-6">
-                Book your flight
-              </h3>
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4 sm:gap-0">
+                <h3 className="font-display text-xl md:text-2xl font-medium text-ink leading-snug">
+                  Book your flight
+                </h3>
+                
+                {/* Trip Type Selector */}
+                <div className="flex bg-offwhite p-1 rounded-xl w-fit">
+                  {["Round trip", "One way", "Multi-city"].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setTripType(type)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                        tripType === type 
+                          ? "bg-white text-indigo shadow-sm" 
+                          : "text-mist hover:text-ink"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
               
               <form 
                 onSubmit={(e) => {
