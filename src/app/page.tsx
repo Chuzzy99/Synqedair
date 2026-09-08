@@ -238,7 +238,38 @@ export default function Home() {
 
       </main>
 
-      <div className="relative z-10 border-t border-line bg-[#05070F]">
+      {/* App Download Promo Section */}
+      <section className="bg-indigo text-white py-20 px-6 md:px-10 relative overflow-hidden">
+        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
+          <div className="max-w-xl text-center md:text-left">
+            <h2 className="font-display text-3xl md:text-4xl font-semibold mb-4 tracking-tight">
+              Get the Full Synqed Air Experience
+            </h2>
+            <p className="text-ice/90 leading-relaxed mb-8">
+              This website is perfect for booking flights, but the real magic happens in the app. Download the Synqed Air app to unlock our AI Travel Advisor, Smart Refund Assistant, and your personal Travel Companion for visas, weather, and real-time gate updates.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start">
+              <button className="bg-white text-indigo font-semibold py-3 px-6 rounded-xl hover:bg-ice transition-colors w-full sm:w-auto">
+                Download for iOS
+              </button>
+              <button className="bg-[#1C9BB8] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#157a91] transition-colors w-full sm:w-auto">
+                Download for Android
+              </button>
+            </div>
+          </div>
+          <div className="w-full md:w-1/3 flex justify-center">
+            {/* Placeholder for Phone Mockup */}
+            <div className="w-48 h-96 border-[8px] border-[#0A1128] rounded-[2.5rem] bg-indigo2 flex flex-col items-center justify-center p-4 relative shadow-2xl">
+               <div className="w-16 h-4 bg-[#0A1128] rounded-full absolute top-2 left-1/2 -translate-x-1/2"></div>
+               <img src="/logo.jpg" alt="Synqed Air" className="w-12 h-12 rounded-xl mb-4 shadow-lg" />
+               <div className="font-display font-semibold text-lg">Synqed Air</div>
+               <div className="text-xs text-ice/70 mt-1">Travel Synqed</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="relative z-10 bg-[#05070F]">
         <Footer />
       </div>
     </div>
