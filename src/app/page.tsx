@@ -24,6 +24,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [greeting, setGreeting] = useState("Hello");
   const [tripType, setTripType] = useState("One way");
+  const [userLocation, setUserLocation] = useState("Lagos");
 
   // Dynamically set greeting based on user's local time (client-side only to avoid hydration mismatch)
   useEffect(() => {
@@ -37,6 +38,18 @@ export default function Home() {
     } else {
       setGreeting("Good day");
     }
+
+    // Fetch user's approximate location (state/region) based on IP
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.region) {
+          setUserLocation(data.region);
+        } else if (data && data.city) {
+          setUserLocation(data.city);
+        }
+      })
+      .catch(err => console.error("Could not fetch location automatically"));
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -162,7 +175,7 @@ export default function Home() {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       disabled={loading}
-                      placeholder="e.g. Lagos (LOS)" 
+                      placeholder={`e.g. ${userLocation}`} 
                       className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg placeholder:text-mist placeholder:font-normal"
                     />
                   </div>
