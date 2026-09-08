@@ -132,7 +132,7 @@ export default function Home() {
                 </button>
               </form>
               
-              <div className="flex gap-2 mt-4 overflow-x-auto pb-2 scrollbar-hide">
+              <div className="flex flex-wrap gap-2 mt-4 pb-2">
                 {["Best value", "No layovers", "Visa-free only", "Under ₦400k"].map(chip => (
                   <button 
                     key={chip} 
@@ -165,25 +165,25 @@ export default function Home() {
             </motion.div>
 
             <div className="flex flex-col gap-3">
-              <motion.button variants={fadeUp} onClick={() => router.push('/search')} className="group flex justify-between items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all">
-                <div className="flex flex-col items-start gap-1 w-2/3 md:w-auto">
+              <motion.button variants={fadeUp} onClick={() => router.push('/search')} className="group flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all gap-3 sm:gap-0">
+                <div className="flex flex-col items-start gap-1">
                   <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md mb-1 bg-[#E8FBFF] text-[#1C9BB8]">Best value</span>
-                  <div className="font-display font-semibold text-sm md:text-base text-ink whitespace-nowrap overflow-hidden text-ellipsis w-full">Lagos → Nairobi</div>
+                  <div className="font-display font-semibold text-sm md:text-base text-ink break-words w-full">Lagos → Nairobi</div>
                   <div className="text-[10px] md:text-xs text-mist">Kenya Airways · 1 stop · 7h 40m</div>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="text-left sm:text-right shrink-0">
                   <b className="font-display text-base md:text-lg text-ink block">₦387,200</b>
                   <div className="text-[9px] md:text-[10px] uppercase tracking-wider text-mist mt-1 font-semibold">all-in</div>
                 </div>
               </motion.button>
               
-              <motion.button variants={fadeUp} onClick={() => router.push('/search')} className="group flex justify-between items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all">
-                <div className="flex flex-col items-start gap-1 w-2/3 md:w-auto">
+              <motion.button variants={fadeUp} onClick={() => router.push('/search')} className="group flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all gap-3 sm:gap-0">
+                <div className="flex flex-col items-start gap-1">
                   <span className="text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md mb-1 bg-[#E5E9FA] text-[#4152B0]">Fastest</span>
-                  <div className="font-display font-semibold text-sm md:text-base text-ink whitespace-nowrap overflow-hidden text-ellipsis w-full">Lagos → Kigali</div>
+                  <div className="font-display font-semibold text-sm md:text-base text-ink break-words w-full">Lagos → Kigali</div>
                   <div className="text-[10px] md:text-xs text-mist">RwandAir · direct · 4h 30m</div>
                 </div>
-                <div className="text-right shrink-0">
+                <div className="text-left sm:text-right shrink-0">
                   <b className="font-display text-base md:text-lg text-ink block">₦468,900</b>
                   <div className="text-[9px] md:text-[10px] uppercase tracking-wider text-mist mt-1 font-semibold">all-in</div>
                 </div>
