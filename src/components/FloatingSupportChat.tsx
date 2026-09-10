@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 
 // Replace XXXXXXXXXX with your actual WhatsApp number (digits only, with country code)
 // e.g. "2348012345678" for a Nigerian number
-const WA_NUMBER = "2348012345678";
+const WA_NUMBER = "2348108372982";
 const WA_MSG = encodeURIComponent(
   "Hi Synqed Air 👋 I need help with my booking."
 );

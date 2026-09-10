@@ -6,7 +6,7 @@ import { motion, Variants } from "framer-motion";
 import { MessageCircle, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 
-const WA_NUMBER = "2348012345678";
+const WA_NUMBER = "2348108372982";
 const WA_MSG = encodeURIComponent("Hi Synqed Air 👋 I need help with my booking.");
 const WA_URL = `https://wa.me/${WA_NUMBER}?text=${WA_MSG}`;
 

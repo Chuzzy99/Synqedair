@@ -19,7 +19,7 @@ const links = {
   ],
   Support: [
     { label: "Help Centre", href: "/support" },
-    { label: "WhatsApp Support", href: "https://wa.me/message/XXXXXXXXXX", external: true },
+    { label: "WhatsApp Support", href: "https://wa.me/2348108372982", external: true },
     { label: "Refund Policy", href: "/support#refunds" },
     { label: "Contact Us", href: "/support" },
   ],
