@@ -20,14 +20,15 @@ export async function parseAdvisorQuery(req: AdvisorParseRequest): Promise<Advis
 }
 
 export async function searchFlights(req: FlightSearchRequest): Promise<FlightSearchResponse> {
-  // Convert request to query params. For simplicity, we just pass origin and destination.
   const params = new URLSearchParams();
   if (req.origin) params.set("origin", req.origin);
   if (req.destination) params.set("destination", req.destination);
-  if (req.departureDate) params.set("departureDate", req.departureDate);
+  if (req.departDate) params.set("departDate", req.departDate);
   if (req.returnDate) params.set("returnDate", req.returnDate);
   if (req.passengers) params.set("passengers", req.passengers.toString());
-  if (req.cabinClass) params.set("cabinClass", req.cabinClass);
+  if (req.filters && req.filters.length > 0) {
+    req.filters.forEach(f => params.append("filter", f));
+  }
   
   const res = await fetch(`${API_BASE}/flights/search?${params.toString()}`);
   if (!res.ok) throw new Error("Failed to search flights");

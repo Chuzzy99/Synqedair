@@ -29,6 +29,8 @@ function SearchResultsContent() {
   const clarify = searchParams.get("clarify");
   const origin = searchParams.get("origin");
   const destination = searchParams.get("destination");
+  const departDate = searchParams.get("departDate");
+  const passengers = searchParams.get("passengers");
 
   const [activeFilter, setActiveFilter] = useState("Best value");
   const [offers, setOffers] = useState<FlightOffer[]>([]);
@@ -41,6 +43,8 @@ function SearchResultsContent() {
         const res = await searchFlights({
           origin: origin || "LOS",
           destination: destination || "NBO",
+          departDate: departDate || new Date().toISOString().split('T')[0],
+          passengers: passengers ? parseInt(passengers) : 1,
           filters: [activeFilter]
         });
         setOffers(res.offers);
@@ -51,7 +55,11 @@ function SearchResultsContent() {
       }
     }
     loadFlights();
-  }, [origin, destination, activeFilter]);
+  }, [origin, destination, departDate, passengers, activeFilter]);
+
+  const formattedDate = departDate 
+    ? new Date(departDate).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })
+    : new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
 
   return (
     <>
@@ -69,12 +77,12 @@ function SearchResultsContent() {
               </h1>
             ) : (
               <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">
-                {origin || "Lagos"} → {destination || "Nairobi"}
+                {origin || "LOS"} → {destination || "NBO"}
               </h1>
             )}
             
             <p className="mt-1.5 text-xs md:text-sm text-[#AEB6CC]">
-              Thu, 3 Sep · 1 traveler · Economy
+              {formattedDate} · {passengers || 1} traveler{parseInt(passengers || "1") > 1 ? "s" : ""}
             </p>
             
             <div className="flex flex-wrap gap-2 mt-6 pb-2">

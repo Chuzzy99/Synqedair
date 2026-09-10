@@ -25,6 +25,44 @@ export default function Home() {
   const [greeting, setGreeting] = useState("Hello");
   const [tripType, setTripType] = useState("One way");
   const [userLocation, setUserLocation] = useState("Lagos");
+  const [departDate, setDepartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [returnDate, setReturnDate] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [passengers, setPassengers] = useState("1");
+
+  // Waitlist form state
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistWhatsapp, setWaitlistWhatsapp] = useState("");
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+
+  const [waitlistError, setWaitlistError] = useState("");
+
+  const handleWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWaitlistError("");
+    if (!waitlistEmail.trim()) return;
+    setWaitlistLoading(true);
+    try {
+      const res = await fetch("https://formspree.io/f/mdeoyvzn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: waitlistEmail.trim(),
+          whatsapp: waitlistWhatsapp.trim() || "—",
+          _subject: "🛫 New Synqed Air waitlist signup",
+        }),
+      });
+      if (!res.ok) {
+        setWaitlistError("Something went wrong. Try again.");
+      } else {
+        setWaitlistDone(true);
+      }
+    } catch {
+      setWaitlistError("Network error — please try again.");
+    } finally {
+      setWaitlistLoading(false);
+    }
+  };
 
   // Dynamically set greeting based on user's local time (client-side only to avoid hydration mismatch)
   useEffect(() => {
@@ -64,6 +102,8 @@ export default function Home() {
     if (!query.trim()) return;
 
     setLoading(true);
+    const passCount = parseInt(passengers) || 1;
+
     try {
       const res = await parseAdvisorQuery({ query });
       if (res.clarifyingQuestion) {
@@ -77,6 +117,10 @@ export default function Home() {
         if (res.searchParams.filters) {
           res.searchParams.filters.forEach(f => params.append("filter", f));
         }
+        params.set("departDate", departDate);
+        if (tripType === "Round trip") params.set("returnDate", returnDate);
+        params.set("passengers", passCount.toString());
+
         router.push(`/search?${params.toString()}`);
       } else {
         router.push(`/search?q=${encodeURIComponent(query)}`);
@@ -170,7 +214,15 @@ export default function Home() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!query.trim()) return;
-                  router.push(`/search?origin=${encodeURIComponent(query)}&destination=NBO`);
+                  const passCount = parseInt(passengers) || 1;
+                  const params = new URLSearchParams();
+                  params.set("origin", query);
+                  params.set("destination", "NBO"); // Fallback default destination
+                  params.set("departDate", departDate);
+                  if (tripType === "Round trip") params.set("returnDate", returnDate);
+                  params.set("passengers", passCount.toString());
+                  
+                  router.push(`/search?${params.toString()}`);
                 }} 
                 className="flex flex-col gap-4"
               >
@@ -199,11 +251,12 @@ export default function Home() {
                 </div>
                 
                 <div className="flex flex-col md:flex-row gap-4">
-                   <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
                     <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Departure</label>
                     <input 
                       type="date" 
-                      defaultValue={new Date().toISOString().split('T')[0]}
+                      value={departDate}
+                      onChange={(e) => setDepartDate(e.target.value)}
                       disabled={loading}
                       className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg"
                     />
@@ -214,7 +267,8 @@ export default function Home() {
                       <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Return</label>
                       <input 
                         type="date" 
-                        defaultValue={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                        value={returnDate}
+                        onChange={(e) => setReturnDate(e.target.value)}
                         disabled={loading}
                         className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg"
                       />
@@ -222,13 +276,17 @@ export default function Home() {
                   )}
 
                   <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
-                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Travelers & Class</label>
-                    <select className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg cursor-pointer">
-                      <option>1 Adult, Economy</option>
-                      <option>2 Adults, Economy</option>
-                      <option>1 Adult, Business</option>
-                      <option>2 Adults, Business</option>
-                      <option>1 Adult, First</option>
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Travelers</label>
+                    <select 
+                      value={passengers}
+                      onChange={(e) => setPassengers(e.target.value)}
+                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg cursor-pointer"
+                    >
+                      <option value="1">1 Adult</option>
+                      <option value="2">2 Adults</option>
+                      <option value="3">3 Adults</option>
+                      <option value="4">4 Adults</option>
+                      <option value="5">5 Adults</option>
                     </select>
                   </div>
 
@@ -340,34 +398,114 @@ export default function Home() {
 
       </main>
 
-      {/* App Download Promo Section */}
-      <section className="bg-indigo text-white py-20 px-6 md:px-10 relative overflow-hidden">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10 relative z-10">
-          <div className="max-w-xl text-center md:text-left">
-            <h2 className="font-display text-3xl md:text-4xl font-semibold mb-4 tracking-tight">
-              Get the full travel experience
-            </h2>
-            <p className="text-ice/90 leading-relaxed mb-8">
-              This website is perfect for booking flights, but the real magic happens in the app. Download the Synqed Air app to unlock our AI Travel Advisor, Smart Refund Assistant, and your personal Travel Companion for visas, weather, and real-time gate updates.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start">
-              <button className="bg-white text-indigo font-semibold py-3 px-6 rounded-xl hover:bg-ice transition-colors w-full sm:w-auto">
-                Download for iOS
-              </button>
-              <button className="bg-[#1C9BB8] text-white font-semibold py-3 px-6 rounded-xl hover:bg-[#157a91] transition-colors w-full sm:w-auto">
-                Download for Android
-              </button>
-            </div>
-          </div>
-          <div className="w-full md:w-1/3 flex justify-center">
-            {/* Placeholder for Phone Mockup */}
-            <div className="w-48 h-96 border-[8px] border-[#0A1128] rounded-[2.5rem] bg-indigo2 flex flex-col items-center justify-center p-4 relative shadow-2xl">
-               <div className="w-16 h-4 bg-[#0A1128] rounded-full absolute top-2 left-1/2 -translate-x-1/2"></div>
-               <img src="/logo.jpg" alt="Synqed Air" className="w-12 h-12 rounded-xl mb-4 shadow-lg" />
-               <div className="font-display font-semibold text-lg">Synqed Air</div>
-               <div className="text-xs text-ice/70 mt-1">Travel Synqed</div>
-            </div>
-          </div>
+      {/* Waitlist Capture Section */}
+      <section className="bg-indigo text-white py-20 md:py-28 px-6 md:px-10 relative overflow-hidden">
+        {/* Subtle radial glow */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div className="w-[600px] h-[600px] rounded-full bg-[#1C9BB8]/20 blur-[120px]" />
+        </div>
+
+        <div className="max-w-3xl mx-auto relative z-10 text-center">
+
+          {/* Countdown badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-1.5 text-xs font-semibold tracking-widest uppercase text-ice mb-8"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-[#3DDCFF] animate-pulse" />
+            App launches Dec 31
+          </motion.div>
+
+          {!waitlistDone ? (
+            <motion.div
+              key="form"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55 }}
+            >
+              <h2 className="font-display text-3xl md:text-5xl font-semibold tracking-tight leading-tight mb-4">
+                Your seat doesn&apos;t have to wait.
+              </h2>
+              <p className="text-ice/80 text-base md:text-lg leading-relaxed mb-10 max-w-xl mx-auto">
+                Drop your email and we&apos;ll notify you the moment the app goes live — early joiners get priority access and a launch-week fare credit.
+              </p>
+
+              <form onSubmit={handleWaitlist} className="flex flex-col gap-3 max-w-md mx-auto">
+                <div className="flex flex-col gap-3">
+                  {/* Email */}
+                  <div className="relative">
+                    <input
+                      id="waitlist-email"
+                      type="email"
+                      required
+                      value={waitlistEmail}
+                      onChange={(e) => setWaitlistEmail(e.target.value)}
+                      disabled={waitlistLoading}
+                      placeholder="Your email address"
+                      className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-5 py-4 text-sm md:text-base outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60"
+                    />
+                  </div>
+
+                  {/* WhatsApp (optional) */}
+                  <div className="relative">
+                    <input
+                      id="waitlist-whatsapp"
+                      type="tel"
+                      value={waitlistWhatsapp}
+                      onChange={(e) => setWaitlistWhatsapp(e.target.value)}
+                      disabled={waitlistLoading}
+                      placeholder="WhatsApp number (optional) +1…"
+                      className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-5 py-4 text-sm md:text-base outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60"
+                    />
+                  </div>
+                </div>
+
+                {waitlistError && (
+                  <p className="text-red-300 text-sm text-center -mt-1">{waitlistError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={waitlistLoading || !waitlistEmail.trim()}
+                  className="w-full bg-white text-indigo font-semibold py-4 rounded-2xl hover:bg-ice transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base shadow-[0_4px_24px_-8px_rgba(255,255,255,0.3)]"
+                >
+                  {waitlistLoading
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Securing your spot…</>
+                    : <>Get early access <ArrowRight className="w-4 h-4" /></>}
+                </button>
+
+                <p className="text-white/30 text-xs mt-1">
+                  No spam. One email when we launch — that&apos;s it.
+                </p>
+              </form>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              className="flex flex-col items-center gap-6"
+            >
+              {/* Checkmark */}
+              <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+                <Check className="w-9 h-9 text-[#3DDCFF]" />
+              </div>
+              <div>
+                <h2 className="font-display text-3xl md:text-4xl font-semibold mb-3">
+                  You&apos;re on the list.
+                </h2>
+                <p className="text-ice/70 text-base md:text-lg max-w-md mx-auto">
+                  We&apos;ll message you the moment the app is live. Keep an eye on WhatsApp too if you shared your number.
+                </p>
+              </div>
+
+            </motion.div>
+          )}
         </div>
       </section>
 
