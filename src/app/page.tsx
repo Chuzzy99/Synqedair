@@ -371,73 +371,75 @@ export default function Home() {
 
             {/* Glow */}
             <div className="pointer-events-none absolute inset-0">
-              <div className="absolute -top-10 -right-10 w-64 h-64 rounded-full bg-[#1C9BB8]/20 blur-[80px]" />
+              <div className="absolute -top-20 -right-20 w-96 h-96 rounded-full bg-[#1C9BB8]/20 blur-[100px]" />
             </div>
 
-            <div className="relative z-10 px-7 md:px-12 py-10 md:py-12">
+            <div className="relative z-10 px-8 md:px-14 py-12 md:py-16">
 
-              {/* Top — app info */}
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-5 mb-8 pb-8 border-b border-white/10">
-                <div className="max-w-sm">
-                  <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-2.5 py-1 mb-3">
-                    <span className="w-1.5 h-1.5 rounded-full bg-ice animate-pulse" />
-                    <span className="text-[10px] font-semibold text-ice tracking-widest uppercase">Launching Dec 31</span>
-                  </div>
-                  <h2 className="font-display text-lg md:text-xl font-semibold text-white mb-1.5 leading-snug">
-                    The full experience is in the app.
-                  </h2>
-                  <p className="text-white/55 text-xs leading-relaxed">
-                    Book on the web. Unlock the AI Travel Companion, auto check-in, visa alerts, smart refunds, and gate alerts in the app.
-                  </p>
+              {/* App info row */}
+              <div className="pb-10 mb-10 border-b border-white/10">
+                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-3 py-1.5 mb-5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-ice animate-pulse" />
+                  <span className="text-xs font-semibold text-ice tracking-widest uppercase">Launching Dec 31</span>
                 </div>
-                <div className="flex flex-wrap gap-2 md:justify-end">
-                  {["Auto check-in", "Visa alerts", "Smart refunds", "Gate alerts"].map((feat) => (
-                    <div key={feat} className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5 text-xs font-medium text-white/75">
-                      <Check className="w-3 h-3 text-ice shrink-0" /> {feat}
-                    </div>
-                  ))}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                  <div className="max-w-lg">
+                    <h2 className="font-display text-2xl md:text-3xl font-semibold text-white mb-2 leading-snug">
+                      The full experience is in the app.
+                    </h2>
+                    <p className="text-white/55 text-sm leading-relaxed">
+                      Book on the web. Then unlock the AI Travel Companion, automatic check-in, visa alerts, smart refunds, and real-time gate alerts in the Synqed Air app.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {["Auto check-in", "Visa alerts", "Smart refunds", "Gate alerts"].map((feat) => (
+                      <div key={feat} className="flex items-center gap-1.5 bg-white/10 border border-white/10 rounded-xl px-3 py-2 text-sm font-medium text-white/75">
+                        <Check className="w-3.5 h-3.5 text-ice shrink-0" /> {feat}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Bottom — waitlist */}
-              <div className="max-w-xl mx-auto text-center">
+              {/* Waitlist form */}
+              <div className="max-w-lg mx-auto text-center">
                 {!waitlistDone ? (
                   <motion.div key="form" initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.45 }}>
-                    <h2 className="font-display text-xl md:text-2xl font-semibold text-white mb-2">
+                    <h2 className="font-display text-2xl md:text-3xl font-semibold text-white mb-3">
                       Your seat doesn&apos;t have to wait.
                     </h2>
-                    <p className="text-ice/65 text-xs md:text-sm mb-5 max-w-sm mx-auto leading-relaxed">
-                      Join early for priority access and a launch-week fare credit.
+                    <p className="text-ice/65 text-sm mb-7 leading-relaxed">
+                      Drop your email and we&apos;ll notify you the moment the app goes live — early joiners get priority access and a launch-week fare credit.
                     </p>
-                    <form onSubmit={handleWaitlist} className="flex flex-col gap-2.5 max-w-sm mx-auto">
+                    <form onSubmit={handleWaitlist} className="flex flex-col gap-3">
                       <input id="waitlist-email" type="email" required value={waitlistEmail}
                         onChange={(e) => setWaitlistEmail(e.target.value)} disabled={waitlistLoading}
                         placeholder="Your email address"
-                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
+                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
                       <input id="waitlist-whatsapp" type="tel" value={waitlistWhatsapp}
                         onChange={(e) => setWaitlistWhatsapp(e.target.value)} disabled={waitlistLoading}
                         placeholder="WhatsApp number (optional) +1…"
-                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
-                      {waitlistError && <p className="text-red-300 text-xs text-center">{waitlistError}</p>}
+                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
+                      {waitlistError && <p className="text-red-300 text-sm text-center">{waitlistError}</p>}
                       <button type="submit" disabled={waitlistLoading || !waitlistEmail.trim()}
-                        className="w-full bg-white text-indigo font-semibold py-3 rounded-xl hover:bg-ice transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
+                        className="w-full bg-white text-indigo font-semibold py-3.5 rounded-2xl hover:bg-ice transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm">
                         {waitlistLoading
                           ? <><Loader2 className="w-4 h-4 animate-spin" /> Securing your spot…</>
                           : <>Get early access <ArrowRight className="w-4 h-4" /></>}
                       </button>
-                      <p className="text-white/25 text-[10px] mt-0.5">No spam. One email when we launch — that&apos;s it.</p>
+                      <p className="text-white/30 text-xs mt-1">No spam. One email when we launch — that&apos;s it.</p>
                     </form>
                   </motion.div>
                 ) : (
                   <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
-                    className="flex flex-col items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
-                      <Check className="w-7 h-7 text-[#3DDCFF]" />
+                    className="flex flex-col items-center gap-5">
+                    <div className="w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+                      <Check className="w-8 h-8 text-[#3DDCFF]" />
                     </div>
                     <div>
-                      <h2 className="font-display text-xl font-semibold text-white mb-1">You&apos;re on the list.</h2>
-                      <p className="text-ice/65 text-sm max-w-xs mx-auto">
-                        We&apos;ll message you when the app is live. Check WhatsApp if you shared your number.
+                      <h2 className="font-display text-2xl font-semibold text-white mb-2">You&apos;re on the list.</h2>
+                      <p className="text-ice/65 text-sm max-w-sm mx-auto">
+                        We&apos;ll message you when the app is live. Check WhatsApp too if you shared your number.
                       </p>
                     </div>
                   </motion.div>
