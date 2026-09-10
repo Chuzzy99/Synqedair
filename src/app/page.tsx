@@ -375,26 +375,26 @@ export default function Home() {
               <div className="absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-[#1C9BB8]/10 blur-[100px]" />
             </div>
 
-            <div className="relative z-10 px-10 md:px-20 py-20 md:py-28">
+            <div className="relative z-10 px-8 md:px-16 lg:px-24 py-20 md:py-32">
 
               {/* App info row */}
-              <div className="pb-14 mb-14 border-b border-white/10">
-                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-7">
+              <div className="pb-16 mb-16 border-b border-white/10">
+                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
                   <span className="w-2 h-2 rounded-full bg-ice animate-pulse" />
                   <span className="text-xs font-semibold text-ice tracking-widest uppercase">Launching Dec 31</span>
                 </div>
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-                  <div className="max-w-xl">
-                    <h2 className="font-display text-3xl md:text-4xl font-semibold text-white mb-4 leading-tight">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12">
+                  <div className="max-w-2xl">
+                    <h2 className="font-display text-4xl md:text-5xl font-semibold text-white mb-5 leading-tight">
                       The full experience is in the app.
                     </h2>
-                    <p className="text-white/60 text-base leading-relaxed">
+                    <p className="text-white/60 text-base md:text-lg leading-relaxed">
                       Book on the web. Then unlock the AI Travel Companion, automatic check-in, visa alerts, smart refunds, and real-time gate alerts in the Synqed Air app.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3 shrink-0">
                     {["Automatic check-in", "Visa alerts", "Smart refunds", "Gate alerts"].map((feat) => (
-                      <div key={feat} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-xl px-4 py-2.5 text-sm font-medium text-white/80">
+                      <div key={feat} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-xl px-5 py-3 text-sm font-medium text-white/80">
                         <Check className="w-4 h-4 text-ice shrink-0" /> {feat}
                       </div>
                     ))}

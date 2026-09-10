@@ -25,17 +25,10 @@ const TEAM = [
   },
   {
     name: "Emmanuel Onyia",
-    title: "Chief Operating Officer",
-    bio: "Operations leader with deep experience scaling logistics across West Africa. Drives the partnerships and airline relationships that power Synqed Air's live inventory.",
+    title: "Co-Founder · COO & CTO",
+    bio: "Co-founder of Synqed Air. Operations leader with deep experience scaling logistics across West Africa, and the architect behind the Synqed Air platform. Drives partnerships, airline relationships, and leads the engineering team delivering live inventory.",
     initials: "EO",
     color: "bg-[#4152B0]",
-  },
-  {
-    name: "Henry Erigbe",
-    title: "Chief Technology Officer",
-    bio: "Full-stack engineer and architect of the Synqed Air platform. Previously built high-throughput systems for African fintech. Leads the engineering team building the app.",
-    initials: "HE",
-    color: "bg-[#0A1128]",
   },
 ];
 
@@ -199,7 +192,7 @@ export default function AboutPage() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-60px" }}
-            className="grid md:grid-cols-3 gap-6"
+            className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto"
           >
             {TEAM.map((member) => (
               <motion.div
