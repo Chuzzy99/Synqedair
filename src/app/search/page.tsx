@@ -7,23 +7,20 @@ import { FlightOffer } from "@/types";
 import { searchFlights } from "@/lib/api";
 import { motion, Variants } from "framer-motion";
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Loader2, AlertCircle } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Loader2, AlertCircle, PlaneTakeoff, ArrowLeft } from "lucide-react";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15 }
-  }
+  show: { opacity: 1, transition: { staggerChildren: 0.12 } },
 };
-
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
 };
 
 function SearchResultsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rawQuery = searchParams.get("q");
   const clarify = searchParams.get("clarify");
@@ -35,21 +32,24 @@ function SearchResultsContent() {
   const [activeFilter, setActiveFilter] = useState("Best value");
   const [offers, setOffers] = useState<FlightOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     async function loadFlights() {
       setLoading(true);
+      setError(false);
       try {
         const res = await searchFlights({
           origin: origin || "LOS",
           destination: destination || "NBO",
-          departDate: departDate || new Date().toISOString().split('T')[0],
+          departDate: departDate || new Date().toISOString().split("T")[0],
           passengers: passengers ? parseInt(passengers) : 1,
-          filters: [activeFilter]
+          filters: [activeFilter],
         });
         setOffers(res.offers);
       } catch (e) {
         console.error("Failed to load flights", e);
+        setError(true);
       } finally {
         setLoading(false);
       }
@@ -57,43 +57,52 @@ function SearchResultsContent() {
     loadFlights();
   }, [origin, destination, departDate, passengers, activeFilter]);
 
-  const formattedDate = departDate 
-    ? new Date(departDate).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })
-    : new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+  const formattedDate = departDate
+    ? new Date(departDate).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })
+    : new Date().toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
 
   return (
     <>
-      <div className="bg-indigo text-white pb-8 rounded-b-[40px] shadow-sm">
+      <div className="bg-[#0A1128] text-white pb-8 rounded-b-[40px] shadow-sm">
         <Nav />
         <div className="mx-auto max-w-5xl px-6 md:px-10 pt-4">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
           >
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center gap-1.5 text-white/50 hover:text-white transition-colors text-sm mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to search
+            </button>
+
             {rawQuery && !origin ? (
               <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">
-                Searching flights for "{rawQuery}"
+                Searching flights for &ldquo;{rawQuery}&rdquo;
               </h1>
             ) : (
-              <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">
-                {origin || "LOS"} → {destination || "NBO"}
+              <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight flex items-center gap-3">
+                {origin || "LOS"}
+                <PlaneTakeoff className="w-5 h-5 text-[#3DDCFF]" />
+                {destination || "NBO"}
               </h1>
             )}
-            
-            <p className="mt-1.5 text-xs md:text-sm text-[#AEB6CC]">
-              {formattedDate} · {passengers || 1} traveler{parseInt(passengers || "1") > 1 ? "s" : ""}
+
+            <p className="mt-1.5 text-xs md:text-sm text-white/45">
+              {formattedDate} · {passengers || 1} traveler{parseInt(passengers || "1") > 1 ? "s" : ""} · All prices shown all-in
             </p>
-            
-            <div className="flex flex-wrap gap-2 mt-6 pb-2">
-              {["Best value", "Fastest", "Cheapest"].map(filter => (
+
+            <div className="flex flex-wrap gap-2 mt-5 pb-2">
+              {["Best value", "Fastest", "Cheapest"].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
                   className={`text-xs font-semibold px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
-                    activeFilter === filter 
-                      ? "bg-ice text-indigo" 
-                      : "bg-white/10 text-[#D9DEEC] hover:bg-white/15"
+                    activeFilter === filter
+                      ? "bg-[#3DDCFF] text-[#0A1128]"
+                      : "bg-white/10 text-white/70 hover:bg-white/15"
                   }`}
                 >
                   {filter}
@@ -105,12 +114,13 @@ function SearchResultsContent() {
       </div>
 
       <main className="mx-auto max-w-3xl px-6 py-10 md:px-10">
-        
+
+        {/* Clarification banner */}
         {clarify && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-ice-tint border border-[#C9F1FC] p-5 rounded-2xl mb-8 flex gap-4"
+            className="bg-[#E8FBFF] border border-[#C9F1FC] p-5 rounded-2xl mb-8 flex gap-4"
           >
             <AlertCircle className="w-6 h-6 text-[#1C9BB8] shrink-0" />
             <div>
@@ -120,22 +130,87 @@ function SearchResultsContent() {
           </motion.div>
         )}
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo animate-spin mb-4" />
-            <p className="text-mist font-medium">Finding the best options...</p>
+        {/* Loading */}
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-24">
+            <Loader2 className="w-8 h-8 text-[#1C9BB8] animate-spin mb-4" />
+            <p className="text-[#8891A6] font-medium">Finding the best options for you…</p>
           </div>
-        ) : (
-          <motion.div 
+        )}
+
+        {/* Error state */}
+        {!loading && error && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-24 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-5">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+            </div>
+            <h3 className="font-display text-lg font-semibold text-[#1B2033] mb-2">
+              Couldn&apos;t connect to flight inventory
+            </h3>
+            <p className="text-[#8891A6] text-sm max-w-sm mb-6 leading-relaxed">
+              Our live inventory is being configured. In the meantime, you can join our waitlist and we&apos;ll alert you when booking goes fully live.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => router.push("/")}
+                className="inline-flex items-center gap-2 bg-[#0A1128] text-white font-semibold text-sm py-3 px-5 rounded-xl hover:bg-[#16224A] transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" /> Back to search
+              </button>
+              <button
+                onClick={() => router.push("/#waitlist")}
+                className="inline-flex items-center gap-2 bg-[#E8FBFF] text-[#1C9BB8] font-semibold text-sm py-3 px-5 rounded-xl hover:bg-[#D0F4FD] transition-colors border border-[#C9F1FC]"
+              >
+                Join waitlist for early access
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !error && offers.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center justify-center py-24 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-[#E8FBFF] flex items-center justify-center mb-5">
+              <PlaneTakeoff className="w-8 h-8 text-[#1C9BB8]" />
+            </div>
+            <h3 className="font-display text-lg font-semibold text-[#1B2033] mb-2">
+              No flights found for this route
+            </h3>
+            <p className="text-[#8891A6] text-sm max-w-sm mb-6 leading-relaxed">
+              We couldn&apos;t find available flights for these dates. Try adjusting your dates or search a different route.
+            </p>
+            <button
+              onClick={() => router.push("/")}
+              className="inline-flex items-center gap-2 bg-[#0A1128] text-white font-semibold text-sm py-3 px-5 rounded-xl hover:bg-[#16224A] transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" /> Modify search
+            </button>
+          </motion.div>
+        )}
+
+        {/* Results */}
+        {!loading && !error && offers.length > 0 && (
+          <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="show"
             className="flex flex-col gap-5"
           >
+            <p className="text-xs text-[#8891A6] font-semibold uppercase tracking-wider px-1">
+              {offers.length} result{offers.length !== 1 ? "s" : ""} · All prices all-in, no checkout surprises
+            </p>
             {offers.map((offer) => (
-               <motion.div key={offer.id} variants={itemVariants}>
-                 <FlightOfferCard offer={offer} />
-               </motion.div>
+              <motion.div key={offer.id} variants={itemVariants}>
+                <FlightOfferCard offer={offer} />
+              </motion.div>
             ))}
           </motion.div>
         )}
@@ -146,12 +221,14 @@ function SearchResultsContent() {
 
 export default function SearchResults() {
   return (
-    <div className="min-h-screen bg-offwhite">
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-offwhite">
-          <Loader2 className="w-8 h-8 text-indigo animate-spin" />
-        </div>
-      }>
+    <div className="min-h-screen bg-[#F4F6FA]">
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-[#F4F6FA]">
+            <Loader2 className="w-8 h-8 text-[#1C9BB8] animate-spin" />
+          </div>
+        }
+      >
         <SearchResultsContent />
       </Suspense>
       <Footer />
