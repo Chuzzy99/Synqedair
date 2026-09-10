@@ -26,14 +26,187 @@ const fadeUp: Variants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
 };
 
-const CORRIDORS = [
-  { from: "Lagos", fromCode: "LOS", to: "London", toCode: "LHR", airlines: "British Airways · Virgin Atlantic", tag: "Most popular" },
-  { from: "Lagos", fromCode: "LOS", to: "New York", toCode: "JFK", airlines: "Delta · Qatar Airways", tag: "High demand" },
-  { from: "Lagos", fromCode: "LOS", to: "Nairobi", toCode: "NBO", airlines: "Kenya Airways · Ethiopian", tag: "Best value" },
-  { from: "Accra", fromCode: "ACC", to: "Toronto", toCode: "YYZ", airlines: "Air Canada · Ethiopian", tag: "" },
-  { from: "Lagos", fromCode: "LOS", to: "Dubai", toCode: "DXB", airlines: "Emirates · Etihad", tag: "Fastest" },
-  { from: "Abuja", fromCode: "ABV", to: "Kigali", toCode: "KGL", airlines: "RwandAir · Kenya Airways", tag: "" },
-];
+// ── Airport hub map: country code → nearest diaspora departure hub ──
+const ORIGIN_MAP: Record<string, { city: string; code: string }> = {
+  NG: { city: "Lagos",   code: "LOS" },
+  GH: { city: "Accra",   code: "ACC" },
+  KE: { city: "Nairobi", code: "NBO" },
+  ET: { city: "Addis",   code: "ADD" },
+  ZA: { city: "Johannesburg", code: "JNB" },
+  SN: { city: "Dakar",   code: "DKR" },
+  CM: { city: "Douala",  code: "DLA" },
+  TZ: { city: "Dar es Salaam", code: "DAR" },
+  UG: { city: "Kampala", code: "EBB" },
+  RW: { city: "Kigali",  code: "KGL" },
+  // Diaspora destinations default
+  GB: { city: "London",  code: "LHR" },
+  US: { city: "New York", code: "JFK" },
+  CA: { city: "Toronto", code: "YYZ" },
+  AE: { city: "Dubai",   code: "DXB" },
+  DE: { city: "Frankfurt", code: "FRA" },
+  FR: { city: "Paris",   code: "CDG" },
+  NL: { city: "Amsterdam", code: "AMS" },
+  IT: { city: "Rome",    code: "FCO" },
+  SA: { city: "Riyadh",  code: "RUH" },
+  QA: { city: "Doha",    code: "DOH" },
+};
+
+// Routes radiating OUT from a given African hub
+const ROUTES_FROM: Record<string, Array<{ to: string; toCode: string; airlines: string; tag: string }>> = {
+  LOS: [
+    { to: "London",   toCode: "LHR", airlines: "British Airways · Virgin Atlantic", tag: "Most popular" },
+    { to: "New York", toCode: "JFK", airlines: "Delta · Qatar Airways",            tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Kenya Airways · Ethiopian",         tag: "Best value"  },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Etihad",                tag: "Fastest"     },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Air Canada · Ethiopian",           tag: ""            },
+    { to: "Kigali",   toCode: "KGL", airlines: "RwandAir · Kenya Airways",         tag: ""            },
+  ],
+  ACC: [
+    { to: "London",   toCode: "LHR", airlines: "British Airways · KLM",            tag: "Most popular" },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Air Canada · Ethiopian",           tag: "High demand"  },
+    { to: "New York", toCode: "JFK", airlines: "Delta · United",                   tag: "Best value"  },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Etihad",                tag: "Fastest"     },
+    { to: "Lagos",    toCode: "LOS", airlines: "Air Peace · Africa World",         tag: ""            },
+    { to: "Amsterdam",toCode: "AMS", airlines: "KLM",                              tag: ""            },
+  ],
+  NBO: [
+    { to: "London",   toCode: "LHR", airlines: "Kenya Airways · British Airways",  tag: "Most popular" },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · flydubai",              tag: "Fastest"     },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Air Canada · Ethiopian",           tag: "High demand"  },
+    { to: "Lagos",    toCode: "LOS", airlines: "Kenya Airways · Air Peace",        tag: "Best value"  },
+    { to: "New York", toCode: "JFK", airlines: "Qatar Airways · KLM",             tag: ""            },
+    { to: "Kigali",   toCode: "KGL", airlines: "RwandAir",                         tag: ""            },
+  ],
+  ADD: [
+    { to: "London",   toCode: "LHR", airlines: "Ethiopian Airlines · British Airways", tag: "Most popular" },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Ethiopian Airlines",               tag: "High demand"  },
+    { to: "New York", toCode: "JFK", airlines: "Ethiopian Airlines",               tag: "Best value"  },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Ethiopian",             tag: "Fastest"     },
+    { to: "Lagos",    toCode: "LOS", airlines: "Ethiopian · Air Peace",            tag: ""            },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Ethiopian · Kenya Airways",        tag: ""            },
+  ],
+  JNB: [
+    { to: "London",   toCode: "LHR", airlines: "South African Airways · Virgin",  tag: "Most popular" },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates",                         tag: "Fastest"     },
+    { to: "New York", toCode: "JFK", airlines: "South African Airways · Delta",   tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Kenya Airways · Ethiopian",        tag: "Best value"  },
+    { to: "Lagos",    toCode: "LOS", airlines: "Air Peace · Ethiopian",            tag: ""            },
+    { to: "Amsterdam",toCode: "AMS", airlines: "KLM",                              tag: ""            },
+  ],
+};
+
+// Routes TO Africa from diaspora hubs
+const ROUTES_TO: Record<string, Array<{ to: string; toCode: string; airlines: string; tag: string }>> = {
+  LHR: [
+    { to: "Lagos",    toCode: "LOS", airlines: "British Airways · Virgin Atlantic", tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "British Airways · KLM",             tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Kenya Airways · British Airways",   tag: "Best value"  },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · British Airways",       tag: ""            },
+    { to: "Johannesburg", toCode: "JNB", airlines: "South African · Virgin",        tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · British Airways",        tag: "Fastest"     },
+  ],
+  JFK: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Delta · Qatar Airways",            tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Delta · Ethiopian",                 tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Qatar Airways · KLM",              tag: "Best value"  },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian Airlines",               tag: ""            },
+    { to: "London",   toCode: "LHR", airlines: "British Airways · American",       tag: "Fastest"     },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Delta",                 tag: ""            },
+  ],
+  YYZ: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Air Canada · Ethiopian",           tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Air Canada · Ethiopian",            tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Air Canada · Qatar Airways",       tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "Air Canada · British Airways",     tag: "Fastest"     },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian Airlines",               tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Air Canada",            tag: ""            },
+  ],
+  DXB: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Emirates · Etihad",                tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Emirates · Ethiopian",              tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Emirates · flydubai",              tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "Emirates · British Airways",       tag: "Fastest"     },
+    { to: "New York", toCode: "JFK", airlines: "Emirates · Delta",                 tag: ""            },
+    { to: "Addis",    toCode: "ADD", airlines: "Emirates · Ethiopian",              tag: ""            },
+  ],
+  FRA: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Lufthansa · Ethiopian",            tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Lufthansa · Ethiopian",             tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Lufthansa · Kenya Airways",        tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "Lufthansa · British Airways",      tag: "Fastest"     },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · Lufthansa",            tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Lufthansa",             tag: ""            },
+  ],
+  CDG: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Air France · Ethiopian",           tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Air France · KLM",                 tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Air France · Kenya Airways",       tag: "Best value"  },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · Air France",           tag: ""            },
+    { to: "London",   toCode: "LHR", airlines: "Air France · British Airways",     tag: "Fastest"     },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Air France",            tag: ""            },
+  ],
+  AMS: [
+    { to: "Lagos",    toCode: "LOS", airlines: "KLM · Ethiopian",                  tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "KLM",                               tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "KLM · Kenya Airways",              tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "KLM · British Airways",            tag: "Fastest"     },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · KLM",                  tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · KLM",                   tag: ""            },
+  ],
+};
+
+// Popular suggestion cards (3 shown in hero sidebar)
+const POPULAR_FROM: Record<string, Array<{ tag: string; tagColor: string; route: string; detail: string; price: string; from: string; fromCode: string; to: string; toCode: string }>> = {
+  LOS: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Lagos → Nairobi",  detail: "Kenya Airways · 1 stop · 7h 40m",    price: "$280", from: "Lagos", fromCode: "LOS", to: "Nairobi", toCode: "NBO" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Lagos → Kigali",   detail: "RwandAir · direct · 4h 30m",          price: "$320", from: "Lagos", fromCode: "LOS", to: "Kigali",  toCode: "KGL" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Lagos → London",   detail: "British Airways · 1 stop · 7h 05m",   price: "$820", from: "Lagos", fromCode: "LOS", to: "London",  toCode: "LHR" },
+  ],
+  ACC: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Accra → London",   detail: "British Airways · direct · 6h 35m",   price: "$750", from: "Accra", fromCode: "ACC", to: "London",  toCode: "LHR" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Accra → Dubai",    detail: "Emirates · direct · 7h 10m",          price: "$580", from: "Accra", fromCode: "ACC", to: "Dubai",   toCode: "DXB" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Accra → New York", detail: "Delta · 1 stop · 14h 20m",            price: "$950", from: "Accra", fromCode: "ACC", to: "New York",toCode: "JFK" },
+  ],
+  NBO: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Nairobi → Dubai",  detail: "Emirates · direct · 5h 10m",          price: "$420", from: "Nairobi", fromCode: "NBO", to: "Dubai",  toCode: "DXB" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Nairobi → London", detail: "Kenya Airways · direct · 8h 40m",      price: "$780", from: "Nairobi", fromCode: "NBO", to: "London", toCode: "LHR" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Nairobi → Toronto",detail: "Air Canada · 1 stop · 17h",            price: "$1100",from: "Nairobi", fromCode: "NBO", to: "Toronto",toCode: "YYZ" },
+  ],
+  ADD: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Addis → London",   detail: "Ethiopian · direct · 9h",             price: "$720", from: "Addis", fromCode: "ADD", to: "London",  toCode: "LHR" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Addis → Dubai",    detail: "Emirates · direct · 4h 20m",          price: "$380", from: "Addis", fromCode: "ADD", to: "Dubai",   toCode: "DXB" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Addis → Toronto",  detail: "Ethiopian · direct · 16h",            price: "$1050",from: "Addis", fromCode: "ADD", to: "Toronto", toCode: "YYZ" },
+  ],
+  JNB: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Joburg → Dubai",   detail: "Emirates · direct · 8h 30m",          price: "$510", from: "Johannesburg", fromCode: "JNB", to: "Dubai",  toCode: "DXB" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Joburg → London",  detail: "South African · direct · 11h 15m",    price: "$890", from: "Johannesburg", fromCode: "JNB", to: "London", toCode: "LHR" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Joburg → Nairobi", detail: "Kenya Airways · direct · 3h 40m",      price: "$290", from: "Johannesburg", fromCode: "JNB", to: "Nairobi",toCode: "NBO" },
+  ],
+  // Diaspora hubs going TO Africa
+  LHR: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "London → Lagos",   detail: "British Airways · direct · 6h 45m", price: "$810", from: "London", fromCode: "LHR", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "London → Nairobi", detail: "Kenya Airways · direct · 8h 40m",   price: "$770", from: "London", fromCode: "LHR", to: "Nairobi", toCode: "NBO" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "London → Accra",   detail: "British Airways · direct · 6h 35m", price: "$740", from: "London", fromCode: "LHR", to: "Accra",   toCode: "ACC" },
+  ],
+  JFK: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "New York → Lagos",   detail: "Delta · 1 stop · 12h 30m",       price: "$960", from: "New York", fromCode: "JFK", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "New York → Accra",   detail: "Delta · 1 stop · 14h 20m",       price: "$940", from: "New York", fromCode: "JFK", to: "Accra",   toCode: "ACC" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "New York → Nairobi", detail: "Qatar Airways · 1 stop · 17h",   price: "$1080",from: "New York", fromCode: "JFK", to: "Nairobi", toCode: "NBO" },
+  ],
+  YYZ: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Toronto → Lagos",   detail: "Air Canada · 1 stop · 15h",       price: "$1050",from: "Toronto", fromCode: "YYZ", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Toronto → Accra",   detail: "Ethiopian · 1 stop · 16h",       price: "$980", from: "Toronto", fromCode: "YYZ", to: "Accra",   toCode: "ACC" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Toronto → Nairobi", detail: "Air Canada · 1 stop · 17h",      price: "$1100",from: "Toronto", fromCode: "YYZ", to: "Nairobi", toCode: "NBO" },
+  ],
+  DXB: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Dubai → Lagos",    detail: "Emirates · direct · 7h",           price: "$580", from: "Dubai", fromCode: "DXB", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Dubai → Nairobi",  detail: "Emirates · direct · 5h 10m",       price: "$420", from: "Dubai", fromCode: "DXB", to: "Nairobi", toCode: "NBO" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Dubai → Accra",    detail: "Emirates · direct · 7h 10m",       price: "$570", from: "Dubai", fromCode: "DXB", to: "Accra",   toCode: "ACC" },
+  ],
+};
+
+// Default fallback: USA → Africa
+const DEFAULT_CODE = "JFK";
 
 export default function Home() {
   const router = useRouter();
@@ -41,7 +214,10 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [greeting, setGreeting] = useState("Hello");
   const [tripType, setTripType] = useState("One way");
-  const [userLocation, setUserLocation] = useState("Lagos");
+  const [userCountryCode, setUserCountryCode] = useState("US");
+  const [userOriginCode, setUserOriginCode] = useState(DEFAULT_CODE);
+  const [userOriginCity, setUserOriginCity] = useState("New York");
+  const [userLocation, setUserLocation] = useState("New York");
   const [departDate, setDepartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [returnDate, setReturnDate] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
   const [passengers, setPassengers] = useState("1");
@@ -83,14 +259,32 @@ export default function Home() {
     else if (hour < 20) setGreeting("Good evening");
     else setGreeting("Good day");
 
-    const cached = localStorage.getItem("synqed_last_location");
-    if (cached) setUserLocation(cached);
+    // Last known location from localStorage
+    const cachedCountry = localStorage.getItem("synqed_country_code");
+    const cachedOriginCode = localStorage.getItem("synqed_origin_code");
+    const cachedOriginCity = localStorage.getItem("synqed_origin_city");
+    if (cachedCountry) setUserCountryCode(cachedCountry);
+    if (cachedOriginCode) { setUserOriginCode(cachedOriginCode); setUserLocation(cachedOriginCode); }
+    if (cachedOriginCity) setUserOriginCity(cachedOriginCity);
 
+    // Live IP detection
     fetch("https://ipapi.co/json/")
       .then((r) => r.json())
       .then((d) => {
-        const loc = d?.region || d?.city;
-        if (loc) { setUserLocation(loc); localStorage.setItem("synqed_last_location", loc); }
+        const countryCode: string = d?.country_code || "US";
+        setUserCountryCode(countryCode);
+        localStorage.setItem("synqed_country_code", countryCode);
+
+        // Pick hub: prefer African origin, else map diaspora country to its hub
+        const hub = ORIGIN_MAP[countryCode];
+        const originCode = hub?.code ?? DEFAULT_CODE;
+        const originCity = hub?.city ?? "New York";
+        setUserOriginCode(originCode);
+        setUserOriginCity(originCity);
+        setUserLocation(d?.city || originCity);
+        localStorage.setItem("synqed_origin_code", originCode);
+        localStorage.setItem("synqed_origin_city", originCity);
+        localStorage.setItem("synqed_last_location", d?.city || originCity);
       })
       .catch(() => {});
   }, []);
@@ -257,12 +451,9 @@ export default function Home() {
             </motion.div>
 
             <div className="flex flex-col gap-3">
-              {[
-                { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Lagos → Nairobi", detail: "Kenya Airways · 1 stop · 7h 40m", price: "$280" },
-                { tag: "Fastest", tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Lagos → Kigali", detail: "RwandAir · direct · 4h 30m", price: "$320" },
-                { tag: "Trending", tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Lagos → London", detail: "British Airways · 1 stop · 7h 05m", price: "$820" },
-              ].map((r) => (
-                <motion.button key={r.route} variants={fadeUp} onClick={() => router.push("/search")}
+              {(POPULAR_FROM[userOriginCode] ?? POPULAR_FROM[DEFAULT_CODE]).map((r) => (
+                <motion.button key={r.route} variants={fadeUp}
+                  onClick={() => router.push(`/search?origin=${r.fromCode}&destination=${r.toCode}`)}
                   className="group flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all gap-3 sm:gap-0">
                   <div className="flex flex-col items-start gap-1">
                     <span className={`text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md mb-0.5 ${r.tagColor}`}>{r.tag}</span>
@@ -311,25 +502,29 @@ export default function Home() {
 
               <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {CORRIDORS.map((c) => (
-                  <motion.button key={`${c.fromCode}-${c.toCode}`} variants={fadeUp}
-                    onClick={() => router.push(`/search?origin=${c.fromCode}&destination=${c.toCode}`)}
-                    className="group text-left bg-offwhite hover:bg-white border border-transparent hover:border-line rounded-2xl p-5 transition-all hover:shadow-[0_8px_24px_-8px_rgba(10,17,40,0.12)]">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-bold text-indigo">{c.fromCode}</span>
-                        <PlaneTakeoff className="w-3.5 h-3.5 text-mist" />
-                        <span className="font-mono text-sm font-bold text-indigo">{c.toCode}</span>
+                {(ROUTES_FROM[userOriginCode] ?? ROUTES_TO[userOriginCode] ?? ROUTES_TO[DEFAULT_CODE]).map((c) => {
+                  const fromCode = userOriginCode;
+                  const fromCity = userOriginCity;
+                  return (
+                    <motion.button key={`${fromCode}-${c.toCode}`} variants={fadeUp}
+                      onClick={() => router.push(`/search?origin=${fromCode}&destination=${c.toCode}`)}
+                      className="group text-left bg-offwhite hover:bg-white border border-transparent hover:border-line rounded-2xl p-5 transition-all hover:shadow-[0_8px_24px_-8px_rgba(10,17,40,0.12)]">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-bold text-indigo">{fromCode}</span>
+                          <PlaneTakeoff className="w-3.5 h-3.5 text-mist" />
+                          <span className="font-mono text-sm font-bold text-indigo">{c.toCode}</span>
+                        </div>
+                        {c.tag && <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo/5 text-indigo px-2 py-0.5 rounded-full">{c.tag}</span>}
                       </div>
-                      {c.tag && <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo/5 text-indigo px-2 py-0.5 rounded-full">{c.tag}</span>}
-                    </div>
-                    <div className="font-display font-semibold text-base text-ink mb-1">{c.from} → {c.to}</div>
-                    <div className="text-xs text-mist mb-4">{c.airlines}</div>
-                    <div className="flex items-center gap-1 text-xs font-semibold text-[#1C9BB8] group-hover:gap-2 transition-all">
-                      Search this route <ArrowRight className="w-3.5 h-3.5" />
-                    </div>
-                  </motion.button>
-                ))}
+                      <div className="font-display font-semibold text-base text-ink mb-1">{fromCity} → {c.to}</div>
+                      <div className="text-xs text-mist mb-4">{c.airlines}</div>
+                      <div className="flex items-center gap-1 text-xs font-semibold text-[#1C9BB8] group-hover:gap-2 transition-all">
+                        Search this route <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
+                    </motion.button>
+                  );
+                })}
               </motion.div>
             </div>
 
