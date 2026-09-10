@@ -319,9 +319,9 @@ export default function Home() {
 
             <div className="flex flex-col gap-3">
               {[
-                { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Lagos → Nairobi", detail: "Kenya Airways · 1 stop · 7h 40m", price: "₦387,200" },
-                { tag: "Fastest", tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Lagos → Kigali", detail: "RwandAir · direct · 4h 30m", price: "₦468,900" },
-                { tag: "Trending", tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Lagos → London", detail: "British Airways · 1 stop · 7h 05m", price: "₦1,240,000" },
+                { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Lagos → Nairobi", detail: "Kenya Airways · 1 stop · 7h 40m", price: "$280" },
+                { tag: "Fastest", tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Lagos → Kigali", detail: "RwandAir · direct · 4h 30m", price: "$320" },
+                { tag: "Trending", tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Lagos → London", detail: "British Airways · 1 stop · 7h 05m", price: "$820" },
               ].map((r) => (
                 <motion.button
                   key={r.route}
@@ -456,10 +456,10 @@ export default function Home() {
                   </div>
                   <div className="space-y-3 font-mono text-sm">
                     {[
-                      { label: "Base fare shown", value: "₦350,000" },
-                      { label: "+ Taxes & levies", value: "₦45,200" },
-                      { label: "+ Booking fee", value: "₦12,500" },
-                      { label: "+ Service charge", value: "₦8,000" },
+                      { label: "Base fare shown", value: "$230" },
+                      { label: "+ Taxes & levies", value: "$30" },
+                      { label: "+ Booking fee", value: "$8" },
+                      { label: "+ Service charge", value: "$5" },
                     ].map((row) => (
                       <div key={row.label} className="flex justify-between text-red-900/70">
                         <span>{row.label}</span>
@@ -468,7 +468,7 @@ export default function Home() {
                     ))}
                     <div className="border-t border-red-200 pt-3 flex justify-between font-bold text-red-800 text-base">
                       <span>Final checkout</span>
-                      <span>₦415,700</span>
+                      <span>$273</span>
                     </div>
                   </div>
                   <p className="text-xs text-red-500 mt-4 leading-relaxed">
@@ -484,7 +484,7 @@ export default function Home() {
                   </div>
                   <div className="space-y-3 font-mono text-sm">
                     {[
-                      { label: "Fare", value: "₦350,000", included: false },
+                      { label: "Fare", value: "$230", included: false },
                       { label: "Taxes & levies", value: "included", included: true },
                       { label: "All fees", value: "included", included: true },
                       { label: "Service charge", value: "included", included: true },
@@ -496,7 +496,7 @@ export default function Home() {
                     ))}
                     <div className="border-t border-[#BAE6FD] pt-3 flex justify-between font-bold text-[#0E5A6E] text-base">
                       <span>Final checkout</span>
-                      <span>₦387,200</span>
+                      <span>$255</span>
                     </div>
                   </div>
                   <p className="text-xs text-[#1C9BB8] mt-4 leading-relaxed font-semibold">

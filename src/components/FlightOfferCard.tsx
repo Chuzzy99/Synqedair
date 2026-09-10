@@ -13,9 +13,9 @@ export default function FlightOfferCard({
   const router = useRouter();
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-NG", {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: offer.fees.currency,
+      currency: "USD",
       maximumFractionDigits: 0,
     }).format(amount);
   };
