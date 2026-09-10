@@ -280,19 +280,19 @@ export default function Home() {
         </section>
 
         {/* ── White section ── */}
-        <section className="bg-white text-ink rounded-t-[40px] px-6 md:px-10 pt-20 md:pt-28 pb-0">
+        <section className="bg-white text-ink rounded-t-[40px] px-6 md:px-10 pt-24 md:pt-36 pb-0">
           <div className="max-w-6xl mx-auto">
 
             {/* Stats bar */}
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-px bg-line rounded-2xl overflow-hidden mb-20 md:mb-28 border border-line">
+              className="grid grid-cols-2 md:grid-cols-4 gap-px bg-line rounded-2xl overflow-hidden mb-24 md:mb-36 border border-line">
               {[
                 { value: "200+", label: "Active routes" },
                 { value: "40+", label: "Airlines covered" },
                 { value: "$0", label: "Hidden fees. Ever." },
                 { value: "< 2 min", label: "WhatsApp response" },
               ].map((stat) => (
-                <div key={stat.label} className="bg-white px-6 py-6 md:py-8 text-center">
+                <div key={stat.label} className="bg-white px-6 py-8 md:py-10 text-center">
                   <div className="font-display text-2xl md:text-3xl font-bold text-indigo mb-1">{stat.value}</div>
                   <div className="text-xs md:text-sm text-mist font-medium">{stat.label}</div>
                 </div>
@@ -300,11 +300,11 @@ export default function Home() {
             </motion.div>
 
             {/* Corridors */}
-            <div className="mb-20 md:mb-28">
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-                <span className="font-mono text-xs tracking-widest text-[#1C9BB8] uppercase mb-3 block">The corridors we know</span>
-                <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight mb-4">Routes built for the diaspora.</h2>
-                <p className="text-mist text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+            <div className="mb-24 md:mb-36">
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <span className="font-mono text-xs tracking-widest text-[#1C9BB8] uppercase mb-4 block">The corridors we know</span>
+                <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-5">Routes built for the diaspora.</h2>
+                <p className="text-mist text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
                   Generic booking tools ignore these corridors. We don&apos;t. Every route below is fully priced before checkout.
                 </p>
               </motion.div>
@@ -334,29 +334,29 @@ export default function Home() {
             </div>
 
             {/* 3 Pillars */}
-            <div className="mb-20 md:mb-28">
-              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-                <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight mb-4">Built for the Diaspora.</h2>
-                <p className="text-mist text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+            <div className="mb-24 md:mb-36">
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-5">Built for the Diaspora.</h2>
+                <p className="text-mist text-base md:text-xl max-w-2xl mx-auto leading-relaxed">
                   We removed every source of friction specific to diaspora travel — before, during, and after the flight.
                 </p>
               </motion.div>
 
               <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}
-                className="grid md:grid-cols-3 gap-6">
+                className="grid md:grid-cols-3 gap-8">
                 {[
                   { icon: <ShieldCheck className="w-7 h-7" />, color: "bg-[#E8FBFF] text-[#1C9BB8]", title: "Total Transparency", body: "What you see is what you pay. Base fare, taxes, and baggage shown explicitly on every result — not added at checkout.", tag: null },
                   { icon: <HeartHandshake className="w-7 h-7" />, color: "bg-[#E5E9FA] text-[#4152B0]", title: "Instant Human Support", body: "Reach a real Synqed Air agent in under 2 minutes on WhatsApp. Delays, changes, and refunds handled — no bot loops, ever.", tag: null },
                   { icon: <Smartphone className="w-7 h-7" />, color: "bg-indigo/5 text-indigo", title: "AI Travel Companion", body: "Visa requirements, weather, automatic check-in, and real-time gate alerts — delivered to your phone precisely when you need them.", tag: "In the app" },
                 ].map((p) => (
                   <motion.div key={p.title} variants={fadeUp}
-                    className="flex flex-col bg-offwhite rounded-3xl p-7 border border-line hover:border-[#C9F1FC] hover:bg-white transition-all">
-                    <div className={`w-14 h-14 rounded-2xl ${p.color} flex items-center justify-center mb-5`}>{p.icon}</div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-display text-lg font-semibold">{p.title}</h3>
+                    className="flex flex-col bg-offwhite rounded-3xl p-9 border border-line hover:border-[#C9F1FC] hover:bg-white transition-all">
+                    <div className={`w-16 h-16 rounded-2xl ${p.color} flex items-center justify-center mb-7`}>{p.icon}</div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="font-display text-xl font-semibold">{p.title}</h3>
                       {p.tag && <span className="text-[9px] font-bold uppercase tracking-wider bg-indigo text-white px-2 py-0.5 rounded-full">{p.tag}</span>}
                     </div>
-                    <p className="text-mist leading-relaxed text-sm">{p.body}</p>
+                    <p className="text-mist leading-relaxed text-base">{p.body}</p>
                   </motion.div>
                 ))}
               </motion.div>
@@ -366,8 +366,8 @@ export default function Home() {
         </section>
 
         {/* ── Combined App + Waitlist ── */}
-        <section id="waitlist" className="bg-white px-6 md:px-10 pt-0 pb-0">
-          <div className="bg-indigo rounded-3xl mx-auto max-w-6xl relative overflow-hidden mt-6 mb-0">
+        <section id="waitlist" className="bg-white px-6 md:px-10 pt-0 pb-16 md:pb-24">
+          <div className="bg-indigo rounded-3xl mx-auto max-w-6xl relative overflow-hidden mt-0 mb-0">
 
             {/* Glow */}
             <div className="pointer-events-none absolute inset-0">
