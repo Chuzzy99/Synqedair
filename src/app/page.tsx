@@ -334,7 +334,7 @@ export default function Home() {
             </div>
 
             {/* 3 Pillars */}
-            <div className="mb-24 md:mb-36">
+            <div className="mb-0">
               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
                 <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-5">Built for the Diaspora.</h2>
                 <p className="text-mist text-base md:text-xl max-w-2xl mx-auto leading-relaxed">
