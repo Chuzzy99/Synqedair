@@ -10,7 +10,6 @@ import {
   HeartHandshake,
   PlaneTakeoff,
   Loader2,
-  X,
   Smartphone,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -424,87 +423,6 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* ── Pricing transparency comparison ── */}
-            <div className="mb-20 md:mb-28">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-center mb-12"
-              >
-                <span className="font-mono text-xs tracking-widest text-[#1C9BB8] uppercase mb-3 block">The Synqed Air difference</span>
-                <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-semibold tracking-tight mb-4">
-                  What you see is what you pay.
-                </h2>
-                <p className="text-mist text-base md:text-lg max-w-xl mx-auto leading-relaxed">
-                  Most booking sites show one price and charge another. We solved that.
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto"
-              >
-                {/* Others */}
-                <div className="rounded-3xl border border-red-100 bg-red-50 p-7">
-                  <div className="flex items-center gap-2 mb-6">
-                    <X className="w-5 h-5 text-red-400" />
-                    <span className="font-semibold text-red-700 text-sm">Generic booking sites</span>
-                  </div>
-                  <div className="space-y-3 font-mono text-sm">
-                    {[
-                      { label: "Base fare shown", value: "$230" },
-                      { label: "+ Taxes & levies", value: "$30" },
-                      { label: "+ Booking fee", value: "$8" },
-                      { label: "+ Service charge", value: "$5" },
-                    ].map((row) => (
-                      <div key={row.label} className="flex justify-between text-red-900/70">
-                        <span>{row.label}</span>
-                        <span>{row.value}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-red-200 pt-3 flex justify-between font-bold text-red-800 text-base">
-                      <span>Final checkout</span>
-                      <span>$273</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-red-500 mt-4 leading-relaxed">
-                    Price increased by ₦65,700 after you entered your card details.
-                  </p>
-                </div>
-
-                {/* Synqed Air */}
-                <div className="rounded-3xl border border-[#C9F1FC] bg-[#E8FBFF] p-7">
-                  <div className="flex items-center gap-2 mb-6">
-                    <Check className="w-5 h-5 text-[#1C9BB8]" />
-                    <span className="font-semibold text-[#0E5A6E] text-sm">Synqed Air</span>
-                  </div>
-                  <div className="space-y-3 font-mono text-sm">
-                    {[
-                      { label: "Fare", value: "$230", included: false },
-                      { label: "Taxes & levies", value: "included", included: true },
-                      { label: "All fees", value: "included", included: true },
-                      { label: "Service charge", value: "included", included: true },
-                    ].map((row) => (
-                      <div key={row.label} className="flex justify-between text-[#0E5A6E]">
-                        <span>{row.label}</span>
-                        <span className={row.included ? "text-[#1C9BB8] font-semibold" : ""}>{row.value}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-[#BAE6FD] pt-3 flex justify-between font-bold text-[#0E5A6E] text-base">
-                      <span>Final checkout</span>
-                      <span>$255</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-[#1C9BB8] mt-4 leading-relaxed font-semibold">
-                    ✓ Same price as search results. Zero surprises.
-                  </p>
-                </div>
-              </motion.div>
-            </div>
 
             {/* ── 3 Pillars ── */}
             <div className="mb-20 md:mb-28">
