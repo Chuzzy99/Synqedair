@@ -416,15 +416,6 @@ export default function Home() {
                         className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg" />
                     </div>
                   )}
-                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
-                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Travelers</label>
-                    <select value={passengers} onChange={(e) => setPassengers(e.target.value)}
-                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg cursor-pointer">
-                      {["1 Adult","2 Adults","3 Adults","4 Adults","5 Adults"].map((o, i) => (
-                        <option key={o} value={i+1}>{o}</option>
-                      ))}
-                    </select>
-                  </div>
                   <button type="submit" disabled={loading || !query.trim()}
                     className="flex-1 rounded-2xl bg-indigo text-white font-semibold text-lg flex items-center justify-center gap-2 hover:bg-indigo2 transition-colors disabled:opacity-50 min-h-[60px]">
                     {loading ? <Loader2 className="w-5 h-5 text-ice animate-spin" /> : <>Search Flights <ArrowRight className="w-5 h-5 text-ice" /></>}
