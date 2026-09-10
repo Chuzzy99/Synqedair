@@ -280,7 +280,7 @@ export default function Home() {
         </section>
 
         {/* ── White section ── */}
-        <section className="bg-white text-ink rounded-t-[40px] px-6 md:px-10 pt-24 md:pt-36 pb-0">
+        <section className="bg-white text-ink rounded-t-[40px] px-6 md:px-10 pt-24 md:pt-36 pb-16 md:pb-24">
           <div className="max-w-6xl mx-auto">
 
             {/* Stats bar */}
@@ -362,12 +362,9 @@ export default function Home() {
               </motion.div>
             </div>
 
-          </div>
-        </section>
 
-        {/* ── Combined App + Waitlist ── */}
-        <section id="waitlist" className="bg-white px-6 md:px-10 pt-0 pb-16 md:pb-24">
-          <div className="bg-indigo rounded-3xl mx-auto max-w-6xl relative overflow-hidden mt-0 mb-0">
+          {/* ── Combined App + Waitlist ── */}
+          <div id="waitlist" className="bg-indigo rounded-3xl mx-auto relative overflow-hidden mt-16">
 
             {/* Glow */}
             <div className="pointer-events-none absolute inset-0">
@@ -448,6 +445,8 @@ export default function Home() {
               </div>
 
             </div>
+          </div>
+
           </div>
         </section>
 
