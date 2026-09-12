@@ -2,6 +2,7 @@
 
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import AirportInput, { type Airport } from "@/components/AirportInput";
 import { motion, Variants } from "framer-motion";
 import {
   ArrowRight,
@@ -14,7 +15,6 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import { parseAdvisorQuery } from "@/lib/api";
 
 const staggerContainer: Variants = {
   hidden: { opacity: 0 },
@@ -210,8 +210,9 @@ const DEFAULT_CODE = "JFK";
 
 export default function Home() {
   const router = useRouter();
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [originAirport, setOriginAirport]           = useState<Airport | null>(null);
+  const [destinationAirport, setDestinationAirport] = useState<Airport | null>(null);
+  const [loading, setLoading]                        = useState(false);
   const [greeting, setGreeting] = useState("Hello");
   const [tripType, setTripType] = useState("One way");
   const [userCountryCode, setUserCountryCode] = useState("US");
@@ -220,7 +221,10 @@ export default function Home() {
   const [userLocation, setUserLocation] = useState("New York");
   const [departDate, setDepartDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [returnDate, setReturnDate] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
-  const [passengers, setPassengers] = useState("1");
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const [cabinClass, setCabinClass] = useState("economy");
+  const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
 
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistWhatsapp, setWaitlistWhatsapp] = useState("");
@@ -289,31 +293,6 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    setLoading(true);
-    const passCount = parseInt(passengers) || 1;
-    try {
-      const res = await parseAdvisorQuery({ query });
-      if (res.clarifyingQuestion) {
-        router.push(`/search?q=${encodeURIComponent(query)}&clarify=${encodeURIComponent(res.clarifyingQuestion)}`);
-      } else if (res.searchParams) {
-        const params = new URLSearchParams();
-        if (res.searchParams.origin) params.set("origin", res.searchParams.origin);
-        if (res.searchParams.destination) params.set("destination", res.searchParams.destination);
-        if (res.searchParams.filters) res.searchParams.filters.forEach((f) => params.append("filter", f));
-        params.set("departDate", departDate);
-        if (tripType === "Round trip") params.set("returnDate", returnDate);
-        params.set("passengers", passCount.toString());
-        router.push(`/search?${params.toString()}`);
-      } else {
-        router.push(`/search?q=${encodeURIComponent(query)}`);
-      }
-    } catch {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen text-white overflow-hidden relative">
@@ -380,27 +359,34 @@ export default function Home() {
 
               <form onSubmit={(e) => {
                 e.preventDefault();
-                if (!query.trim()) return;
+                if (!originAirport || !destinationAirport) return;
                 const params = new URLSearchParams();
-                params.set("origin", query);
-                params.set("destination", "NBO");
-                params.set("departDate", departDate);
+                params.set("origin",      originAirport.code);
+                params.set("destination", destinationAirport.code);
+                params.set("departDate",  departDate);
                 if (tripType === "Round trip") params.set("returnDate", returnDate);
-                params.set("passengers", (parseInt(passengers) || 1).toString());
+                params.set("adults", adults.toString());
+                params.set("children", children.toString());
+                params.set("cabinClass", cabinClass);
                 router.push(`/search?${params.toString()}`);
               }} className="flex flex-col gap-4">
                 <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
-                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">From</label>
-                    <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} disabled={loading}
-                      placeholder={`e.g. ${userLocation}`}
-                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg placeholder:text-mist placeholder:font-normal" />
-                  </div>
-                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
-                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">To</label>
-                    <input type="text" defaultValue="Nairobi (NBO)" disabled={loading} placeholder="e.g. Nairobi (NBO)"
-                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg placeholder:text-mist placeholder:font-normal" />
-                  </div>
+                  <AirportInput
+                    id="origin-input"
+                    label="From"
+                    value={originAirport}
+                    onChange={setOriginAirport}
+                    placeholder={`e.g. ${userOriginCity}`}
+                    disabled={loading}
+                  />
+                  <AirportInput
+                    id="destination-input"
+                    label="To"
+                    value={destinationAirport}
+                    onChange={setDestinationAirport}
+                    placeholder="e.g. London, Dubai, Nairobi"
+                    disabled={loading}
+                  />
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
@@ -416,9 +402,56 @@ export default function Home() {
                         className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg" />
                     </div>
                   )}
-                  <button type="submit" disabled={loading || !query.trim()}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 relative">
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all relative">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Passengers</label>
+                    <button type="button" onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
+                      className="bg-transparent border-none outline-none w-full text-left text-ink font-semibold md:text-lg">
+                      {adults + children} passenger{adults + children > 1 ? "s" : ""}
+                    </button>
+                    {showPassengerDropdown && (
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-line p-4 z-50">
+                        <div className="flex justify-between items-center mb-4">
+                          <div>
+                            <div className="text-sm font-semibold text-ink">Adults</div>
+                            <div className="text-xs text-mist">18+</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => setAdults(Math.max(1, adults - 1))} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">-</button>
+                            <span className="font-semibold text-ink w-4 text-center">{adults}</span>
+                            <button type="button" onClick={() => setAdults(adults + 1)} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">+</button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="text-sm font-semibold text-ink">Children</div>
+                            <div className="text-xs text-mist">0–17</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => setChildren(Math.max(0, children - 1))} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">-</button>
+                            <span className="font-semibold text-ink w-4 text-center">{children}</span>
+                            <button type="button" onClick={() => setChildren(children + 1)} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">+</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Class</label>
+                    <select value={cabinClass} onChange={(e) => setCabinClass(e.target.value)} disabled={loading}
+                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg appearance-none cursor-pointer">
+                      <option value="economy">Economy</option>
+                      <option value="premium_economy">Premium Economy</option>
+                      <option value="business">Business</option>
+                      <option value="first">First</option>
+                    </select>
+                  </div>
+                  
+                  <button type="submit" disabled={loading || !originAirport || !destinationAirport}
                     className="flex-1 rounded-2xl bg-indigo text-white font-semibold text-lg flex items-center justify-center gap-2 hover:bg-indigo2 transition-colors disabled:opacity-50 min-h-[60px]">
-                    {loading ? <Loader2 className="w-5 h-5 text-ice animate-spin" /> : <>Search Flights <ArrowRight className="w-5 h-5 text-ice" /></>}
+                    {loading ? <Loader2 className="w-5 h-5 text-ice animate-spin" /> : <>Find flights</>}
                   </button>
                 </div>
               </form>

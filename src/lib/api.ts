@@ -39,7 +39,9 @@ export async function searchFlights(
   if (req.destination) params.set("destination", req.destination);
   if (req.departDate)  params.set("departDate",  req.departDate);
   if (req.returnDate)  params.set("returnDate",  req.returnDate);
-  params.set("passengers", String(req.passengers ?? 1));
+  if (req.adults !== undefined)    params.set("adults",  String(req.adults));
+  if (req.children !== undefined)  params.set("children",String(req.children));
+  if (req.cabinClass)  params.set("cabinClass", req.cabinClass);
 
   const res = await fetch(`${API_BASE}/flights/search?${params.toString()}`);
   if (!res.ok) {

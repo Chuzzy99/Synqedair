@@ -40,12 +40,14 @@ export type AdvisorParseResponse = {
 };
 
 export type FlightSearchRequest = {
-  origin:       string;
-  destination:  string;
-  departDate?:  string;
-  returnDate?:  string;
-  passengers?:  number;
-  filters?:     string[];
+  origin?: string;
+  destination?: string;
+  departDate?: string;
+  returnDate?: string;
+  adults?: number;
+  children?: number;
+  cabinClass?: string;
+  filters?: string[];
 };
 
 export type FlightSearchResponse = {

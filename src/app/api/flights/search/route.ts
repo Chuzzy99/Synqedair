@@ -75,7 +75,9 @@ export async function GET(req: NextRequest) {
   const origin      = searchParams.get("origin")      ?? "LOS";
   const destination = searchParams.get("destination") ?? "LHR";
   const departDate  = searchParams.get("departDate")  ?? new Date().toISOString().split("T")[0];
-  const passengers  = parseInt(searchParams.get("passengers") ?? "1");
+  const adults      = parseInt(searchParams.get("adults") ?? "1");
+  const children    = parseInt(searchParams.get("children") ?? "0");
+  const cabinClass  = searchParams.get("cabinClass") ?? "economy";
 
   if (!DUFFEL_TOKEN) {
     return NextResponse.json({ error: "Missing Duffel token" }, { status: 500 });
@@ -92,8 +94,11 @@ export async function GET(req: NextRequest) {
             departure_date: departDate,
           },
         ],
-        passengers: Array.from({ length: passengers }, () => ({ type: "adult" })),
-        cabin_class: "economy",
+        passengers: [
+          ...Array.from({ length: adults }, () => ({ type: "adult" })),
+          ...Array.from({ length: children }, () => ({ type: "child" }))
+        ],
+        cabin_class: cabinClass,
       },
     };
 

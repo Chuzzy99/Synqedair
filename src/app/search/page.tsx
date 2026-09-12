@@ -27,7 +27,9 @@ function SearchResultsContent() {
   const origin = searchParams.get("origin");
   const destination = searchParams.get("destination");
   const departDate = searchParams.get("departDate");
-  const passengers = searchParams.get("passengers");
+  const adults = searchParams.get("adults");
+  const children = searchParams.get("children");
+  const cabinClass = searchParams.get("cabinClass");
 
   const [activeFilter, setActiveFilter] = useState("Best value");
   const [offers, setOffers] = useState<FlightOffer[]>([]);
@@ -43,7 +45,9 @@ function SearchResultsContent() {
           origin: origin || "LOS",
           destination: destination || "NBO",
           departDate: departDate || new Date().toISOString().split("T")[0],
-          passengers: passengers ? parseInt(passengers) : 1,
+          adults: adults ? parseInt(adults) : 1,
+          children: children ? parseInt(children) : 0,
+          cabinClass: cabinClass || "economy",
           filters: [activeFilter],
         });
         setOffers(res.offers);
@@ -91,7 +95,7 @@ function SearchResultsContent() {
             )}
 
             <p className="mt-1.5 text-xs md:text-sm text-white/45">
-              {formattedDate} · {passengers || 1} traveler{parseInt(passengers || "1") > 1 ? "s" : ""} · All prices shown all-in
+              {formattedDate} · {(parseInt(adults || "1") + parseInt(children || "0"))} traveler{(parseInt(adults || "1") + parseInt(children || "0")) > 1 ? "s" : ""} · All prices shown all-in
             </p>
 
             <div className="flex flex-wrap gap-2 mt-5 pb-2">
