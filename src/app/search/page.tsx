@@ -59,7 +59,7 @@ function SearchResultsContent() {
       }
     }
     loadFlights();
-  }, [origin, destination, departDate, passengers, activeFilter]);
+  }, [origin, destination, departDate, adults, children, cabinClass, activeFilter]);
 
   const formattedDate = departDate
     ? new Date(departDate).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" })
