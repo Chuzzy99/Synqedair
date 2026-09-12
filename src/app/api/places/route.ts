@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ data: [] });
   }
 
-  const DUFFEL_TOKEN = process.env.DUFFEL_TOKEN;
+  const DUFFEL_TOKEN = process.env.DUFFEL_ACCESS_TOKEN;
   if (!DUFFEL_TOKEN) {
     return NextResponse.json({ error: "Missing Duffel token" }, { status: 500 });
   }
