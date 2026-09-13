@@ -27,8 +27,37 @@ export async function POST(req: Request) {
       },
     });
 
-    // 2. Here you could verify the Paystack transaction using the paystackRef
-    // For now, we assume the frontend sent a valid success reference.
+    // 2. Verify the Paystack transaction using the paystackRef
+    const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+    if (!PAYSTACK_SECRET) {
+      return NextResponse.json({ success: false, error: "Missing Paystack secret" }, { status: 500 });
+    }
+
+    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${paystackRef}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${PAYSTACK_SECRET}`,
+      },
+    });
+
+    if (!verifyRes.ok) {
+      return NextResponse.json({ success: false, error: "Payment verification failed" }, { status: 400 });
+    }
+
+    const verifyData = await verifyRes.json();
+    if (verifyData.data.status !== "success") {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: "FAILED" },
+      });
+      return NextResponse.json({ success: false, error: "Payment not successful" }, { status: 400 });
+    }
+
+    // Payment is successful, update order to PAID
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { status: "PAID" },
+    });
 
     // 3. Create the Order in Duffel using our pre-funded Balance
     const res = await fetch("https://api.duffel.com/air/orders", {
