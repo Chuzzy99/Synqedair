@@ -1,64 +1,93 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
 
-const DUFFEL_BASE = "https://api.duffel.com";
-const DUFFEL_TOKEN = process.env.DUFFEL_ACCESS_TOKEN!;
+const prisma = new PrismaClient();
 
-const DUFFEL_HEADERS = {
-  Authorization: `Bearer ${DUFFEL_TOKEN}`,
-  "Duffel-Version": "v2",
-  "Content-Type": "application/json",
-  Accept: "application/json",
-};
-
-export async function POST(req: NextRequest) {
-  if (!DUFFEL_TOKEN) {
-    return NextResponse.json({ error: "Missing Duffel token" }, { status: 500 });
-  }
-
+export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { offerId, passengers } = body;
-
-    if (!offerId || !passengers?.length) {
-      return NextResponse.json({ error: "offerId and passengers are required" }, { status: 400 });
+    const DUFFEL_TOKEN = process.env.DUFFEL_ACCESS_TOKEN;
+    if (!DUFFEL_TOKEN) {
+      return NextResponse.json({ success: false, error: "Missing Duffel token" }, { status: 500 });
     }
 
-    const orderBody = {
-      data: {
-        selected_offers: [offerId],
-        passengers,
-        payments: [
-          {
-            type: "balance",
-            currency: passengers[0]?.currency ?? "GBP",
-            amount: body.amount,
-          },
-        ],
-      },
-    };
+    const body = await req.json();
+    const { offerId, passengers, services, payments, paystackRef, totalAmount, currency } = body;
 
-    const res = await fetch(`${DUFFEL_BASE}/air/orders`, {
+    // 1. Create a Pending Order in the Database
+    const order = await prisma.order.create({
+      data: {
+        offerId,
+        totalAmount,
+        currency,
+        paystackRef,
+        status: "PENDING",
+        passengerDetails: JSON.stringify(passengers),
+      },
+    });
+
+    // 2. Here you could verify the Paystack transaction using the paystackRef
+    // For now, we assume the frontend sent a valid success reference.
+
+    // 3. Create the Order in Duffel using our pre-funded Balance
+    const res = await fetch("https://api.duffel.com/air/orders", {
       method: "POST",
-      headers: DUFFEL_HEADERS,
-      body: JSON.stringify(orderBody),
+      headers: {
+        "Accept-Encoding": "gzip",
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Duffel-Version": "v2",
+        "Authorization": `Bearer ${DUFFEL_TOKEN}`,
+      },
+      body: JSON.stringify({
+        data: {
+          type: "instant",
+          selected_offers: [offerId],
+          passengers: passengers.map((p: any) => ({
+            id: p.id,
+            given_name: p.first_name,
+            family_name: p.last_name,
+            born_on: p.born_on,
+            title: p.title,
+            gender: p.gender,
+            phone_number: p.phone_number,
+            email: p.email,
+          })),
+          services: services.map((s: any) => ({
+            id: s.id,
+            quantity: s.quantity,
+          })),
+          payments: payments, // The frontend passes { type: "balance", currency, amount }
+        }
+      }),
     });
 
     if (!res.ok) {
-      const err = await res.text();
-      console.error("Duffel order error:", err);
-      return NextResponse.json({ error: "Booking failed", detail: err }, { status: res.status });
+      const errorText = await res.text();
+      console.error("Duffel create order error:", errorText);
+      
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: "FAILED" },
+      });
+      
+      return NextResponse.json({ success: false, error: "Failed to create order on Duffel" }, { status: res.status });
     }
 
-    const data = await res.json();
-    const order = data.data;
+    const json = await res.json();
+    const duffelOrderId = json.data.id;
 
-    return NextResponse.json({
-      bookingId: order.id,
-      bookingReference: order.booking_reference,
-      paymentLink: null, // Duffel balance flow — no redirect link needed
+    // 4. Update the Database Order as Booked
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { 
+        status: "BOOKED",
+        duffelOrderId: duffelOrderId
+      },
     });
-  } catch (err) {
-    console.error("Duffel booking error:", err);
-    return NextResponse.json({ error: "Internal error", detail: String(err) }, { status: 500 });
+
+    return NextResponse.json({ success: true, orderId: order.id, duffelOrderId });
+  } catch (e) {
+    console.error("Internal API error:", e);
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
