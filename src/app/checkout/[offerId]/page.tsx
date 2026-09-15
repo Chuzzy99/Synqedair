@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { DuffelAncillaries } from "@duffel/components";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Nav from "@/components/Nav";
-import { PaystackButton } from "react-paystack";
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -94,13 +93,6 @@ export default function CheckoutPage() {
     : 0;
   const totalPrice = basePrice + ancillariesPrice;
 
-  // Paystack Configuration
-  const paystackConfig = {
-    reference: (new Date()).getTime().toString(),
-    email: email || "customer@synqedair.com",
-    amount: totalPrice * 100, // Paystack is in kobo / cents
-    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY || "", // Ensure this is set in .env.local
-  };
 
   const handlePaystackSuccessAction = async (reference: any) => {
     try {
@@ -139,6 +131,39 @@ export default function CheckoutPage() {
     } catch (e) {
       console.error(e);
       alert("Error confirming booking.");
+    }
+  };
+
+  const handlePaymentInit = async () => {
+    try {
+      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+      const callbackUrl = `${window.location.origin}/success`;
+      
+      // Call backend to initialize payment
+      const res = await fetch(`${BACKEND_URL}/api/bookings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          offerId: offer.id,
+          passengerName: passengersData[0]?.first_name + " " + passengersData[0]?.last_name,
+          passengerEmail: email,
+          passengerPhone: phoneNumber,
+          amountNaira: totalPrice,
+          callbackUrl,
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (data.paymentAuthorizationUrl) {
+        // Redirect to Paystack payment page
+        window.location.href = data.paymentAuthorizationUrl;
+      } else {
+        alert("Failed to initialize payment");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error initializing payment");
     }
   };
 
@@ -280,14 +305,13 @@ export default function CheckoutPage() {
               <p className="text-xs text-red-500 mb-4 text-center bg-red-50 p-2 rounded-xl">Please fill out all passenger details before paying.</p>
             )}
 
-            <PaystackButton
-              {...paystackConfig}
-              text="Pay Now"
-              onSuccess={handlePaystackSuccessAction}
-              onClose={handlePaystackCloseAction}
+            <button
+              onClick={handlePaymentInit}
               disabled={!isFormValid}
               className="w-full rounded-2xl bg-indigo text-white font-semibold text-lg py-4 hover:bg-indigo2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            />
+            >
+              Pay Now
+            </button>
             
             <p className="text-[10px] text-mist text-center mt-4">Payments processed securely by Paystack. All prices include taxes and fees.</p>
           </div>

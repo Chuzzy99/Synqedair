@@ -7,29 +7,25 @@ const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
-    const DUFFEL_TOKEN = process.env.DUFFEL_ACCESS_TOKEN;
-    if (!DUFFEL_TOKEN) {
-      return NextResponse.json({ success: false, error: "Missing Duffel token" }, { status: 500 });
+    const body = await req.json();
+    const { reference } = body;
+
+    if (!reference) {
+      return NextResponse.json({ success: false, error: "Missing reference" }, { status: 400 });
     }
 
-    const body = await req.json();
-    const { offerId, passengers, services, payments, paystackRef, totalAmount, currency } = body;
-
-    // 1. Create a Pending Order in the Database
-    const order = await prisma.order.create({
-      data: {
-        offerId,
-        totalAmount,
-        currency,
-        paystackRef,
-        status: "PENDING",
-        passengerDetails: JSON.stringify(passengers),
-      },
+    // 1. Find the pending order in the database
+    const order = await prisma.order.findFirst({
+      where: { paystackRef: reference },
     });
+
+    if (!order) {
+      return NextResponse.json({ success: false, error: "Order not found" }, { status: 404 });
+    }
 
     // 2. Verify the Paystack transaction using the paystackRef via backend API
     const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
-    const verifyRes = await fetch(`${BACKEND_URL}/api/bookings/verify/${paystackRef}`, {
+    const verifyRes = await fetch(`${BACKEND_URL}/api/bookings/verify/${reference}`, {
       method: "GET",
     });
 
@@ -50,13 +46,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Payment not successful" }, { status: 400 });
     }
 
-    // Payment is successful, update order to PAID
+    // 3. If order is already booked, return success
+    if (order.status === "BOOKED") {
+      return NextResponse.json({ success: true, orderId: order.id, duffelOrderId: order.duffelOrderId });
+    }
+
+    // 4. Payment is successful, update order to PAID
     await prisma.order.update({
       where: { id: order.id },
       data: { status: "PAID" },
     });
 
-    // 3. Create the Order in Duffel using our pre-funded Balance
+    // 5. Create the Order in Duffel using the stored passenger details
+    const DUFFEL_TOKEN = process.env.DUFFEL_ACCESS_TOKEN;
+    if (!DUFFEL_TOKEN) {
+      return NextResponse.json({ success: false, error: "Missing Duffel token" }, { status: 500 });
+    }
+
+    const passengers = JSON.parse(order.passengerDetails);
+    
     const res = await fetch("https://api.duffel.com/air/orders", {
       method: "POST",
       headers: {
@@ -69,7 +77,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         data: {
           type: "instant",
-          selected_offers: [offerId],
+          selected_offers: [order.offerId],
           passengers: passengers.map((p: any) => ({
             id: p.id,
             given_name: p.first_name,
@@ -80,11 +88,13 @@ export async function POST(req: Request) {
             phone_number: p.phone_number,
             email: p.email,
           })),
-          services: services.map((s: any) => ({
-            id: s.id,
-            quantity: s.quantity,
-          })),
-          payments: payments, // The frontend passes { type: "balance", currency, amount }
+          payments: [
+            {
+              type: "balance",
+              currency: order.currency,
+              amount: String(order.totalAmount),
+            }
+          ],
         }
       }),
     });
@@ -104,7 +114,7 @@ export async function POST(req: Request) {
     const json = await res.json();
     const duffelOrderId = json.data.id;
 
-    // 4. Update the Database Order as Booked
+    // 6. Update the Database Order as Booked
     await prisma.order.update({
       where: { id: order.id },
       data: { 
