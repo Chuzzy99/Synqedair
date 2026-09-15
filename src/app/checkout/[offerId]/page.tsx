@@ -82,19 +82,6 @@ export default function CheckoutPage() {
     init();
   }, [offerId]);
 
-  // Update local price when prices change
-  useEffect(() => {
-    async function updateLocalPrice() {
-      if (totalPrice > 0 && localCurrency !== "USD") {
-        const converted = await convertUSDToCurrency(totalPrice, localCurrency);
-        setLocalTotalPrice(converted);
-      } else {
-        setLocalTotalPrice(totalPrice);
-      }
-    }
-    updateLocalPrice();
-  }, [totalPrice, localCurrency]);
-
   const updatePassenger = (index: number, field: string, value: string) => {
     const newData = [...passengersData];
     newData[index] = { ...newData[index], [field]: value };
@@ -125,6 +112,19 @@ export default function CheckoutPage() {
     : 0;
   const bookingFee = 20; // $20 USD booking fee
   const totalPrice = basePrice + ancillariesPrice + bookingFee;
+
+  // Update local price when prices change
+  useEffect(() => {
+    async function updateLocalPrice() {
+      if (totalPrice > 0 && localCurrency !== "USD") {
+        const converted = await convertUSDToCurrency(totalPrice, localCurrency);
+        setLocalTotalPrice(converted);
+      } else {
+        setLocalTotalPrice(totalPrice);
+      }
+    }
+    updateLocalPrice();
+  }, [totalPrice, localCurrency]);
 
 
   const handlePaystackSuccessAction = async (reference: any) => {
