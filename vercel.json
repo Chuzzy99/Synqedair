@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd synqed-air-website/synqed-air && npm run build",
+  "outputDirectory": "synqed-air-website/synqed-air/.next",
+  "installCommand": "cd synqed-air-website/synqed-air && npm install",
+  "framework": "nextjs"
+}
