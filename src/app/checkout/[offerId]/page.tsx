@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { DuffelAncillaries } from "@duffel/components";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Nav from "@/components/Nav";
-import { getUserLocation, getStoredLocation, convertUSDToCurrency, getPaystackCurrency, formatCurrency, getCurrencySymbol } from "@/lib/currency";
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -16,11 +15,6 @@ export default function CheckoutPage() {
   const [clientKey, setClientKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-
-  // Currency State
-  const [localCurrency, setLocalCurrency] = useState<string>("USD");
-  const [localTotalPrice, setLocalTotalPrice] = useState<number | null>(null);
-  const [paymentCurrency, setPaymentCurrency] = useState<string>("USD");
 
   // Form State
   const [passengersData, setPassengersData] = useState<any[]>([]);
@@ -34,15 +28,25 @@ export default function CheckoutPage() {
       try {
         // Fetch Offer
         const offerRes = await fetch(`/api/flights/offer?id=${offerId}`);
+        if (!offerRes.ok) {
+          throw new Error(`Offer fetch failed: ${offerRes.status}`);
+        }
         const offerData = await offerRes.json();
         if (offerData.error) throw new Error("Offer failed");
         setOffer(offerData);
 
         // Fetch Client Key
-        const keyRes = await fetch("/api/client-key", { method: "POST", body: JSON.stringify({ offerId }) });
-        const keyData = await keyRes.json();
-        if (keyData.client_key) {
-          setClientKey(keyData.client_key);
+        try {
+          const keyRes = await fetch("/api/client-key", { method: "POST", body: JSON.stringify({ offerId }) });
+          if (keyRes.ok) {
+            const keyData = await keyRes.json();
+            if (keyData.client_key) {
+              setClientKey(keyData.client_key);
+            }
+          }
+        } catch (keyError) {
+          console.error("Client key fetch failed:", keyError);
+          // Continue without client key - ancillaries won't work but page should load
         }
 
         // Initialize passenger form state
@@ -60,26 +64,9 @@ export default function CheckoutPage() {
           );
         }
 
-        // Get user location and currency
-        try {
-          const stored = getStoredLocation();
-          if (stored) {
-            setLocalCurrency(stored.currency);
-            const paystackCurrency = getPaystackCurrency(stored.currency);
-            setPaymentCurrency(paystackCurrency);
-          } else {
-            const location = await getUserLocation();
-            setLocalCurrency(location.currency);
-            const paystackCurrency = getPaystackCurrency(location.currency);
-            setPaymentCurrency(paystackCurrency);
-          }
-        } catch (currencyError) {
-          console.error("Currency detection failed, using USD:", currencyError);
-          setLocalCurrency("USD");
-          setPaymentCurrency("USD");
-        }
+
       } catch (e) {
-        console.error(e);
+        console.error("Checkout init failed:", e);
         setError(true);
       } finally {
         setLoading(false);
@@ -119,18 +106,7 @@ export default function CheckoutPage() {
   const bookingFee = 20; // $20 USD booking fee
   const totalPrice = basePrice + ancillariesPrice + bookingFee;
 
-  // Update local price when prices change
-  useEffect(() => {
-    async function updateLocalPrice() {
-      if (totalPrice > 0 && localCurrency !== "USD") {
-        const converted = await convertUSDToCurrency(totalPrice, localCurrency);
-        setLocalTotalPrice(converted);
-      } else {
-        setLocalTotalPrice(totalPrice);
-      }
-    }
-    updateLocalPrice();
-  }, [totalPrice, localCurrency]);
+
 
 
   const handlePaystackSuccessAction = async (reference: any) => {
@@ -178,10 +154,6 @@ export default function CheckoutPage() {
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
       const callbackUrl = `${window.location.origin}/success`;
 
-      // Use local price for payment if currency is supported, otherwise use USD
-      const paymentAmount = localTotalPrice || totalPrice;
-      const finalCurrency = paymentCurrency;
-
       // Call backend to initialize payment
       const res = await fetch(`${BACKEND_URL}/api/bookings`, {
         method: "POST",
@@ -191,8 +163,8 @@ export default function CheckoutPage() {
           passengerName: passengersData[0]?.first_name + " " + passengersData[0]?.last_name,
           passengerEmail: email,
           passengerPhone: phoneNumber,
-          amount: paymentAmount,
-          currency: finalCurrency,
+          amount: totalPrice,
+          currency: offer.total_currency,
           callbackUrl,
         }),
       });
@@ -349,20 +321,6 @@ export default function CheckoutPage() {
               <span>Total</span>
               <span className="text-indigo">{offer.total_currency} {totalPrice.toFixed(2)}</span>
             </div>
-
-            {localTotalPrice !== null && localCurrency !== "USD" && (
-              <div className="bg-[#E8FBFF] p-3 rounded-xl mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-[#1C9BB8] font-medium">Payable in {localCurrency}</span>
-                  <span className="text-lg font-bold text-[#1C9BB8]">{getCurrencySymbol(localCurrency)}{localTotalPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-                </div>
-                {paymentCurrency !== localCurrency && (
-                  <p className="text-xs text-[#1C9BB8] mt-1">
-                    Processed in {paymentCurrency} via Paystack
-                  </p>
-                )}
-              </div>
-            )}
 
             {!isFormValid && (
               <p className="text-xs text-red-500 mb-4 text-center bg-red-50 p-2 rounded-xl">Please fill out all passenger details before paying.</p>
