@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { FlightOffer } from "@/types";
+import { convertUSDToCurrency, getStoredLocation, getUserLocation, formatCurrency, getCurrencySymbol } from "@/lib/currency";
 
 export default function FlightOfferCard({
   offer,
@@ -11,6 +12,27 @@ export default function FlightOfferCard({
   offer: FlightOffer;
 }) {
   const router = useRouter();
+  const [localCurrency, setLocalCurrency] = useState<string>("USD");
+  const [localPrice, setLocalPrice] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function initCurrency() {
+      // Try to get stored location first
+      const stored = getStoredLocation();
+      if (stored) {
+        setLocalCurrency(stored.currency);
+        const converted = await convertUSDToCurrency(offer.fees.total, stored.currency);
+        setLocalPrice(converted);
+      } else {
+        // Fetch location if not stored
+        const location = await getUserLocation();
+        setLocalCurrency(location.currency);
+        const converted = await convertUSDToCurrency(offer.fees.total, location.currency);
+        setLocalPrice(converted);
+      }
+    }
+    initCurrency();
+  }, [offer.fees.total]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -70,6 +92,11 @@ export default function FlightOfferCard({
         </div>
         <div className="text-left sm:text-right">
           <b className="font-display text-lg md:text-xl text-ink block">{formatCurrency(offer.fees.total)}</b>
+          {localPrice !== null && localCurrency !== "USD" && (
+            <div className="text-xs text-[#2E7D3B] font-semibold mt-1">
+              ({getCurrencySymbol(localCurrency)}{localPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })})
+            </div>
+          )}
           <div className="text-[9px] md:text-[10px] text-[#2E7D3B] font-bold uppercase tracking-wider mt-0.5">
             ✓ all fees included
           </div>
