@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/wise-topup",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}

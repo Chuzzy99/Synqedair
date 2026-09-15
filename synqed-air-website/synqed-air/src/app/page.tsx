@@ -1,0 +1,721 @@
+"use client";
+
+import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
+import AirportInput, { type Airport } from "@/components/AirportInput";
+import { motion, Variants } from "framer-motion";
+import {
+  ArrowRight,
+  Check,
+  ShieldCheck,
+  HeartHandshake,
+  PlaneTakeoff,
+  Loader2,
+  Smartphone,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { 
+  getCurrencyFromCountry, 
+  formatCurrency,
+  fetchExchangeRates,
+  calculateDynamicBookingFee
+} from "@/lib/currency";
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.12 } },
+};
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
+};
+
+// ── Airport hub map: country code → nearest diaspora departure hub ──
+const ORIGIN_MAP: Record<string, { city: string; code: string }> = {
+  NG: { city: "Lagos",   code: "LOS" },
+  GH: { city: "Accra",   code: "ACC" },
+  KE: { city: "Nairobi", code: "NBO" },
+  ET: { city: "Addis",   code: "ADD" },
+  ZA: { city: "Johannesburg", code: "JNB" },
+  SN: { city: "Dakar",   code: "DKR" },
+  CM: { city: "Douala",  code: "DLA" },
+  TZ: { city: "Dar es Salaam", code: "DAR" },
+  UG: { city: "Kampala", code: "EBB" },
+  RW: { city: "Kigali",  code: "KGL" },
+  // Diaspora destinations default
+  GB: { city: "London",  code: "LHR" },
+  US: { city: "New York", code: "JFK" },
+  CA: { city: "Toronto", code: "YYZ" },
+  AE: { city: "Dubai",   code: "DXB" },
+  DE: { city: "Frankfurt", code: "FRA" },
+  FR: { city: "Paris",   code: "CDG" },
+  NL: { city: "Amsterdam", code: "AMS" },
+  IT: { city: "Rome",    code: "FCO" },
+  SA: { city: "Riyadh",  code: "RUH" },
+  QA: { city: "Doha",    code: "DOH" },
+};
+
+// Routes radiating OUT from a given African hub
+const ROUTES_FROM: Record<string, Array<{ to: string; toCode: string; airlines: string; tag: string }>> = {
+  LOS: [
+    { to: "London",   toCode: "LHR", airlines: "British Airways · Virgin Atlantic", tag: "Most popular" },
+    { to: "New York", toCode: "JFK", airlines: "Delta · Qatar Airways",            tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Kenya Airways · Ethiopian",         tag: "Best value"  },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Etihad",                tag: "Fastest"     },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Air Canada · Ethiopian",           tag: ""            },
+    { to: "Kigali",   toCode: "KGL", airlines: "RwandAir · Kenya Airways",         tag: ""            },
+  ],
+  ACC: [
+    { to: "London",   toCode: "LHR", airlines: "British Airways · KLM",            tag: "Most popular" },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Air Canada · Ethiopian",           tag: "High demand"  },
+    { to: "New York", toCode: "JFK", airlines: "Delta · United",                   tag: "Best value"  },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Etihad",                tag: "Fastest"     },
+    { to: "Lagos",    toCode: "LOS", airlines: "Air Peace · Africa World",         tag: ""            },
+    { to: "Amsterdam",toCode: "AMS", airlines: "KLM",                              tag: ""            },
+  ],
+  NBO: [
+    { to: "London",   toCode: "LHR", airlines: "Kenya Airways · British Airways",  tag: "Most popular" },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · flydubai",              tag: "Fastest"     },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Air Canada · Ethiopian",           tag: "High demand"  },
+    { to: "Lagos",    toCode: "LOS", airlines: "Kenya Airways · Air Peace",        tag: "Best value"  },
+    { to: "New York", toCode: "JFK", airlines: "Qatar Airways · KLM",             tag: ""            },
+    { to: "Kigali",   toCode: "KGL", airlines: "RwandAir",                         tag: ""            },
+  ],
+  ADD: [
+    { to: "London",   toCode: "LHR", airlines: "Ethiopian Airlines · British Airways", tag: "Most popular" },
+    { to: "Toronto",  toCode: "YYZ", airlines: "Ethiopian Airlines",               tag: "High demand"  },
+    { to: "New York", toCode: "JFK", airlines: "Ethiopian Airlines",               tag: "Best value"  },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Ethiopian",             tag: "Fastest"     },
+    { to: "Lagos",    toCode: "LOS", airlines: "Ethiopian · Air Peace",            tag: ""            },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Ethiopian · Kenya Airways",        tag: ""            },
+  ],
+  JNB: [
+    { to: "London",   toCode: "LHR", airlines: "South African Airways · Virgin",  tag: "Most popular" },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates",                         tag: "Fastest"     },
+    { to: "New York", toCode: "JFK", airlines: "South African Airways · Delta",   tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Kenya Airways · Ethiopian",        tag: "Best value"  },
+    { to: "Lagos",    toCode: "LOS", airlines: "Air Peace · Ethiopian",            tag: ""            },
+    { to: "Amsterdam",toCode: "AMS", airlines: "KLM",                              tag: ""            },
+  ],
+};
+
+// Routes TO Africa from diaspora hubs
+const ROUTES_TO: Record<string, Array<{ to: string; toCode: string; airlines: string; tag: string }>> = {
+  LHR: [
+    { to: "Lagos",    toCode: "LOS", airlines: "British Airways · Virgin Atlantic", tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "British Airways · KLM",             tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Kenya Airways · British Airways",   tag: "Best value"  },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · British Airways",       tag: ""            },
+    { to: "Johannesburg", toCode: "JNB", airlines: "South African · Virgin",        tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · British Airways",        tag: "Fastest"     },
+  ],
+  JFK: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Delta · Qatar Airways",            tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Delta · Ethiopian",                 tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Qatar Airways · KLM",              tag: "Best value"  },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian Airlines",               tag: ""            },
+    { to: "London",   toCode: "LHR", airlines: "British Airways · American",       tag: "Fastest"     },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Delta",                 tag: ""            },
+  ],
+  YYZ: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Air Canada · Ethiopian",           tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Air Canada · Ethiopian",            tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Air Canada · Qatar Airways",       tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "Air Canada · British Airways",     tag: "Fastest"     },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian Airlines",               tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Air Canada",            tag: ""            },
+  ],
+  DXB: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Emirates · Etihad",                tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Emirates · Ethiopian",              tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Emirates · flydubai",              tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "Emirates · British Airways",       tag: "Fastest"     },
+    { to: "New York", toCode: "JFK", airlines: "Emirates · Delta",                 tag: ""            },
+    { to: "Addis",    toCode: "ADD", airlines: "Emirates · Ethiopian",              tag: ""            },
+  ],
+  FRA: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Lufthansa · Ethiopian",            tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Lufthansa · Ethiopian",             tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Lufthansa · Kenya Airways",        tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "Lufthansa · British Airways",      tag: "Fastest"     },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · Lufthansa",            tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Lufthansa",             tag: ""            },
+  ],
+  CDG: [
+    { to: "Lagos",    toCode: "LOS", airlines: "Air France · Ethiopian",           tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "Air France · KLM",                 tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "Air France · Kenya Airways",       tag: "Best value"  },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · Air France",           tag: ""            },
+    { to: "London",   toCode: "LHR", airlines: "Air France · British Airways",     tag: "Fastest"     },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · Air France",            tag: ""            },
+  ],
+  AMS: [
+    { to: "Lagos",    toCode: "LOS", airlines: "KLM · Ethiopian",                  tag: "Most popular" },
+    { to: "Accra",    toCode: "ACC", airlines: "KLM",                               tag: "High demand"  },
+    { to: "Nairobi",  toCode: "NBO", airlines: "KLM · Kenya Airways",              tag: "Best value"  },
+    { to: "London",   toCode: "LHR", airlines: "KLM · British Airways",            tag: "Fastest"     },
+    { to: "Addis",    toCode: "ADD", airlines: "Ethiopian · KLM",                  tag: ""            },
+    { to: "Dubai",    toCode: "DXB", airlines: "Emirates · KLM",                   tag: ""            },
+  ],
+};
+
+// Popular suggestion cards (3 shown in hero sidebar)
+const POPULAR_FROM: Record<string, Array<{ tag: string; tagColor: string; route: string; detail: string; price: string; from: string; fromCode: string; to: string; toCode: string }>> = {
+  LOS: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Lagos → Nairobi",  detail: "Kenya Airways · 1 stop · 7h 40m",    price: "$280", from: "Lagos", fromCode: "LOS", to: "Nairobi", toCode: "NBO" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Lagos → Kigali",   detail: "RwandAir · direct · 4h 30m",          price: "$320", from: "Lagos", fromCode: "LOS", to: "Kigali",  toCode: "KGL" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Lagos → London",   detail: "British Airways · 1 stop · 7h 05m",   price: "$820", from: "Lagos", fromCode: "LOS", to: "London",  toCode: "LHR" },
+  ],
+  ACC: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Accra → London",   detail: "British Airways · direct · 6h 35m",   price: "$750", from: "Accra", fromCode: "ACC", to: "London",  toCode: "LHR" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Accra → Dubai",    detail: "Emirates · direct · 7h 10m",          price: "$580", from: "Accra", fromCode: "ACC", to: "Dubai",   toCode: "DXB" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Accra → New York", detail: "Delta · 1 stop · 14h 20m",            price: "$950", from: "Accra", fromCode: "ACC", to: "New York",toCode: "JFK" },
+  ],
+  NBO: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Nairobi → Dubai",  detail: "Emirates · direct · 5h 10m",          price: "$420", from: "Nairobi", fromCode: "NBO", to: "Dubai",  toCode: "DXB" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Nairobi → London", detail: "Kenya Airways · direct · 8h 40m",      price: "$780", from: "Nairobi", fromCode: "NBO", to: "London", toCode: "LHR" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Nairobi → Toronto",detail: "Air Canada · 1 stop · 17h",            price: "$1100",from: "Nairobi", fromCode: "NBO", to: "Toronto",toCode: "YYZ" },
+  ],
+  ADD: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Addis → London",   detail: "Ethiopian · direct · 9h",             price: "$720", from: "Addis", fromCode: "ADD", to: "London",  toCode: "LHR" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Addis → Dubai",    detail: "Emirates · direct · 4h 20m",          price: "$380", from: "Addis", fromCode: "ADD", to: "Dubai",   toCode: "DXB" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Addis → Toronto",  detail: "Ethiopian · direct · 16h",            price: "$1050",from: "Addis", fromCode: "ADD", to: "Toronto", toCode: "YYZ" },
+  ],
+  JNB: [
+    { tag: "Best value", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Joburg → Dubai",   detail: "Emirates · direct · 8h 30m",          price: "$510", from: "Johannesburg", fromCode: "JNB", to: "Dubai",  toCode: "DXB" },
+    { tag: "Fastest",    tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Joburg → London",  detail: "South African · direct · 11h 15m",    price: "$890", from: "Johannesburg", fromCode: "JNB", to: "London", toCode: "LHR" },
+    { tag: "Trending",   tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Joburg → Nairobi", detail: "Kenya Airways · direct · 3h 40m",      price: "$290", from: "Johannesburg", fromCode: "JNB", to: "Nairobi",toCode: "NBO" },
+  ],
+  // Diaspora hubs going TO Africa
+  LHR: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "London → Lagos",   detail: "British Airways · direct · 6h 45m", price: "$810", from: "London", fromCode: "LHR", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "London → Nairobi", detail: "Kenya Airways · direct · 8h 40m",   price: "$770", from: "London", fromCode: "LHR", to: "Nairobi", toCode: "NBO" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "London → Accra",   detail: "British Airways · direct · 6h 35m", price: "$740", from: "London", fromCode: "LHR", to: "Accra",   toCode: "ACC" },
+  ],
+  JFK: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "New York → Lagos",   detail: "Delta · 1 stop · 12h 30m",       price: "$960", from: "New York", fromCode: "JFK", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "New York → Accra",   detail: "Delta · 1 stop · 14h 20m",       price: "$940", from: "New York", fromCode: "JFK", to: "Accra",   toCode: "ACC" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "New York → Nairobi", detail: "Qatar Airways · 1 stop · 17h",   price: "$1080",from: "New York", fromCode: "JFK", to: "Nairobi", toCode: "NBO" },
+  ],
+  YYZ: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Toronto → Lagos",   detail: "Air Canada · 1 stop · 15h",       price: "$1050",from: "Toronto", fromCode: "YYZ", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Toronto → Accra",   detail: "Ethiopian · 1 stop · 16h",       price: "$980", from: "Toronto", fromCode: "YYZ", to: "Accra",   toCode: "ACC" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Toronto → Nairobi", detail: "Air Canada · 1 stop · 17h",      price: "$1100",from: "Toronto", fromCode: "YYZ", to: "Nairobi", toCode: "NBO" },
+  ],
+  DXB: [
+    { tag: "Most popular", tagColor: "bg-[#E8FBFF] text-[#1C9BB8]", route: "Dubai → Lagos",    detail: "Emirates · direct · 7h",           price: "$580", from: "Dubai", fromCode: "DXB", to: "Lagos",   toCode: "LOS" },
+    { tag: "Best value",   tagColor: "bg-[#E5E9FA] text-[#4152B0]", route: "Dubai → Nairobi",  detail: "Emirates · direct · 5h 10m",       price: "$420", from: "Dubai", fromCode: "DXB", to: "Nairobi", toCode: "NBO" },
+    { tag: "Trending",     tagColor: "bg-[#FFF3E0] text-[#E65100]", route: "Dubai → Accra",    detail: "Emirates · direct · 7h 10m",       price: "$570", from: "Dubai", fromCode: "DXB", to: "Accra",   toCode: "ACC" },
+  ],
+};
+
+// Default fallback - will be overridden by dynamic location detection
+const DEFAULT_CODE = "JFK";
+
+export default function Home() {
+  const router = useRouter();
+  const [originAirport, setOriginAirport]           = useState<Airport | null>(null);
+  const [destinationAirport, setDestinationAirport] = useState<Airport | null>(null);
+  const [loading, setLoading]                        = useState(false);
+  const [greeting, setGreeting] = useState("Hello");
+  const [tripType, setTripType] = useState("One way");
+  const [userCountryCode, setUserCountryCode] = useState("US");
+  const [userOriginCode, setUserOriginCode] = useState(DEFAULT_CODE);
+  const [userOriginCity, setUserOriginCity] = useState("New York");
+  const [userLocation, setUserLocation] = useState("New York");
+  const [userCurrency, setUserCurrency] = useState("USD");
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [dynamicBookingFee, setDynamicBookingFee] = useState<number>(20);
+  const [departDate, setDepartDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [returnDate, setReturnDate] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
+  const [adults, setAdults] = useState(1);
+  const [children, setChildren] = useState(0);
+  const [cabinClass, setCabinClass] = useState("economy");
+  const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
+
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistWhatsapp, setWaitlistWhatsapp] = useState("");
+  const [waitlistLoading, setWaitlistLoading] = useState(false);
+  const [waitlistDone, setWaitlistDone] = useState(false);
+  const [waitlistError, setWaitlistError] = useState("");
+
+  const handleWaitlist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setWaitlistError("");
+    if (!waitlistEmail.trim()) return;
+    setWaitlistLoading(true);
+    try {
+      const res = await fetch("https://formspree.io/f/mdeoyvzn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: waitlistEmail.trim(),
+          whatsapp: waitlistWhatsapp.trim() || "—",
+          _subject: "🛫 New Synqed Air waitlist signup",
+        }),
+      });
+      if (!res.ok) setWaitlistError("Something went wrong. Try again.");
+      else setWaitlistDone(true);
+    } catch {
+      setWaitlistError("Network error — please try again.");
+    } finally {
+      setWaitlistLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good morning");
+    else if (hour < 16) setGreeting("Good afternoon");
+    else if (hour < 20) setGreeting("Good evening");
+    else setGreeting("Good day");
+
+    // Last known location from localStorage
+    const cachedCountry = localStorage.getItem("synqed_country_code");
+    const cachedOriginCode = localStorage.getItem("synqed_origin_code");
+    const cachedOriginCity = localStorage.getItem("synqed_origin_city");
+    const cachedCurrency = localStorage.getItem("synqed_currency");
+    if (cachedCountry) setUserCountryCode(cachedCountry);
+    if (cachedOriginCode) { setUserOriginCode(cachedOriginCode); setUserLocation(cachedOriginCode); }
+    if (cachedOriginCity) setUserOriginCity(cachedOriginCity);
+    if (cachedCurrency) setUserCurrency(cachedCurrency);
+
+    // Fetch exchange rates
+    fetch("/api/currency/rates")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.rates) {
+          setExchangeRates(data.rates);
+          
+          // Calculate dynamic booking fee based on user location
+          const bookingFeeConfig = calculateDynamicBookingFee(userCurrency, data.rates);
+          setDynamicBookingFee(bookingFeeConfig.baseFeeUSD);
+        }
+      })
+      .catch(() => {});
+
+    // Live IP detection
+    fetch("https://ipapi.co/json/")
+      .then((r) => r.json())
+      .then((d) => {
+        const countryCode: string = d?.country_code || "US";
+        setUserCountryCode(countryCode);
+        localStorage.setItem("synqed_country_code", countryCode);
+
+        // Determine user's currency based on country
+        const currency = getCurrencyFromCountry(countryCode);
+        setUserCurrency(currency);
+        localStorage.setItem("synqed_currency", currency);
+
+        // Pick hub: prefer African origin, else map diaspora country to its hub
+        const hub = ORIGIN_MAP[countryCode];
+        const originCode = hub?.code ?? DEFAULT_CODE;
+        const originCity = hub?.city ?? "New York";
+        setUserOriginCode(originCode);
+        setUserOriginCity(originCity);
+        setUserLocation(d?.city || originCity);
+        localStorage.setItem("synqed_origin_code", originCode);
+        localStorage.setItem("synqed_origin_city", originCity);
+        localStorage.setItem("synqed_last_location", d?.city || originCity);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Convert USD price to user's local currency for display in brackets
+  const convertPriceForDisplay = (usdPrice: string): string => {
+    const priceNumber = parseFloat(usdPrice.replace("$", ""));
+    if (userCurrency === "USD" || Object.keys(exchangeRates).length === 0) {
+      return "";
+    }
+    const rate = exchangeRates[userCurrency];
+    if (!rate) return "";
+    const convertedPrice = priceNumber * rate;
+    return `(${formatCurrency(convertedPrice, userCurrency)})`;
+  };
+
+
+  return (
+    <div className="min-h-screen text-white overflow-hidden relative">
+      <Nav />
+
+      {/* Background accent */}
+      <div className="absolute top-0 right-0 w-full max-w-[100vw] h-[600px] pointer-events-none opacity-40 overflow-hidden flex justify-end">
+        <svg className="w-[150%] max-w-[800px] h-auto md:w-[800px] md:h-[600px] text-ice mr-[-10%] md:mr-[-100px] mt-[-50px]" viewBox="0 0 160 120" preserveAspectRatio="xMaxYMin slice">
+          <g stroke="currentColor" strokeWidth="0.6" opacity="0.4">
+            <line x1="10" y1="15" x2="70" y2="45" />
+            <line x1="70" y1="45" x2="40" y2="80" />
+            <line x1="30" y1="10" x2="90" y2="30" />
+            <line x1="70" y1="45" x2="120" y2="60" />
+            <line x1="120" y1="60" x2="140" y2="20" />
+          </g>
+          <g fill="currentColor">
+            <circle cx="10" cy="15" r="1.5" /><circle cx="70" cy="45" r="2" />
+            <circle cx="40" cy="80" r="1.2" /><circle cx="30" cy="10" r="1.2" />
+            <circle cx="90" cy="30" r="1.5" /><circle cx="120" cy="60" r="2.5" />
+            <circle cx="140" cy="20" r="1" />
+          </g>
+        </svg>
+      </div>
+
+      <main className="relative z-10">
+
+        {/* ── Hero ── */}
+        <section className="mx-auto max-w-6xl px-6 md:px-10 pt-12 pb-16 md:pt-20 md:pb-24 grid md:grid-cols-2 gap-12 lg:gap-20 items-center">
+          <motion.div variants={staggerContainer} initial="hidden" animate="show" className="max-w-xl">
+
+            {/* Mobile greeting */}
+            <motion.div variants={fadeUp} className="flex items-center gap-4 mb-8 md:hidden">
+              <div className="w-10 h-10 rounded-full bg-ice flex items-center justify-center text-indigo">
+                <PlaneTakeoff className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-mono text-xs tracking-widest text-ice uppercase block">{greeting}</span>
+                <h2 className="font-display text-2xl font-semibold mt-1">Where to next?</h2>
+              </div>
+            </motion.div>
+
+            {/* Desktop headline */}
+            <div className="hidden md:block">
+              <motion.span variants={fadeUp} className="font-mono text-xs md:text-sm tracking-widest text-ice uppercase mb-4 block">Travel Synqed</motion.span>
+              <motion.h1 variants={fadeUp} className="font-display text-4xl md:text-5xl lg:text-7xl font-semibold leading-[1.06] tracking-tight mb-4 md:mb-6">Where to next?</motion.h1>
+              <motion.p variants={fadeUp} className="text-base md:text-lg leading-relaxed text-white/60 max-w-md">
+                Full price. Every fee shown. The corridors diaspora travelers actually fly — with a real human on WhatsApp when things go sideways.
+              </motion.p>
+            </div>
+
+            {/* Search widget */}
+            <motion.div variants={fadeUp} className="mt-8 md:mt-12 bg-white rounded-3xl p-6 md:p-8 shadow-[0_20px_40px_-18px_rgba(0,0,0,0.6)]">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4 sm:gap-0">
+                <h3 className="font-display text-xl md:text-2xl font-medium text-ink leading-snug">Book your flight</h3>
+                <div className="flex bg-offwhite p-1 rounded-xl w-fit">
+                  {["Round trip", "One way", "Multi-city"].map((type) => (
+                    <button key={type} type="button" onClick={() => setTripType(type)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${tripType === type ? "bg-white text-indigo shadow-sm" : "text-mist hover:text-ink"}`}>
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!originAirport || !destinationAirport) return;
+                const params = new URLSearchParams();
+                params.set("origin",      originAirport.code);
+                params.set("destination", destinationAirport.code);
+                params.set("departDate",  departDate);
+                if (tripType === "Round trip") params.set("returnDate", returnDate);
+                params.set("adults", adults.toString());
+                params.set("children", children.toString());
+                params.set("cabinClass", cabinClass);
+                router.push(`/search?${params.toString()}`);
+              }} className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <AirportInput
+                    id="origin-input"
+                    label="From"
+                    value={originAirport}
+                    onChange={setOriginAirport}
+                    placeholder={`e.g. ${userOriginCity}`}
+                    disabled={loading}
+                  />
+                  <AirportInput
+                    id="destination-input"
+                    label="To"
+                    value={destinationAirport}
+                    onChange={setDestinationAirport}
+                    placeholder="e.g. London, Dubai, Nairobi"
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Departure</label>
+                    <input type="date" value={departDate} onChange={(e) => setDepartDate(e.target.value)} disabled={loading}
+                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg" />
+                  </div>
+                  {tripType === "Round trip" && (
+                    <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                      <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Return</label>
+                      <input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} disabled={loading}
+                        className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-4 relative">
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all relative">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Passengers</label>
+                    <button type="button" onClick={() => setShowPassengerDropdown(!showPassengerDropdown)}
+                      className="bg-transparent border-none outline-none w-full text-left text-ink font-semibold md:text-lg">
+                      {adults + children} passenger{adults + children > 1 ? "s" : ""}
+                    </button>
+                    {showPassengerDropdown && (
+                      <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-line p-4 z-50">
+                        <div className="flex justify-between items-center mb-4">
+                          <div>
+                            <div className="text-sm font-semibold text-ink">Adults</div>
+                            <div className="text-xs text-mist">18+</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => setAdults(Math.max(1, adults - 1))} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">-</button>
+                            <span className="font-semibold text-ink w-4 text-center">{adults}</span>
+                            <button type="button" onClick={() => setAdults(adults + 1)} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">+</button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="text-sm font-semibold text-ink">Children</div>
+                            <div className="text-xs text-mist">0–17</div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => setChildren(Math.max(0, children - 1))} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">-</button>
+                            <span className="font-semibold text-ink w-4 text-center">{children}</span>
+                            <button type="button" onClick={() => setChildren(children + 1)} className="w-8 h-8 flex items-center justify-center bg-offwhite rounded-md text-ink font-bold hover:bg-line">+</button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 bg-offwhite rounded-2xl p-4 transition-all focus-within:ring-2 focus-within:ring-ice">
+                    <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-1">Class</label>
+                    <select value={cabinClass} onChange={(e) => setCabinClass(e.target.value)} disabled={loading}
+                      className="bg-transparent border-none outline-none w-full text-ink font-semibold md:text-lg appearance-none cursor-pointer">
+                      <option value="economy">Economy</option>
+                      <option value="premium_economy">Premium Economy</option>
+                      <option value="business">Business</option>
+                      <option value="first">First</option>
+                    </select>
+                  </div>
+                  
+                  <button type="submit" disabled={loading || !originAirport || !destinationAirport}
+                    className="flex-1 rounded-2xl bg-indigo text-white font-semibold text-lg flex items-center justify-center gap-2 hover:bg-indigo2 transition-colors disabled:opacity-50 min-h-[60px]">
+                    {loading ? <Loader2 className="w-5 h-5 text-ice animate-spin" /> : <>Find flights</>}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+
+          {/* Right col */}
+          <motion.div variants={staggerContainer} initial="hidden" animate="show" className="max-w-md w-full mx-auto md:ml-auto md:mr-0">
+            <motion.div variants={fadeUp} className="flex items-start gap-3 bg-ice/10 border border-ice/20 p-4 rounded-2xl mb-6">
+              <div className="w-6 h-6 rounded bg-ice/20 flex items-center justify-center shrink-0 mt-0.5">
+                <Check className="w-3.5 h-3.5 text-ice" />
+              </div>
+              <p className="text-sm text-ice/90 leading-relaxed font-medium">
+                Every price shown is the full price. No fees appear at checkout that weren&apos;t on the search results page.
+              </p>
+            </motion.div>
+
+            <motion.div variants={fadeUp} className="flex justify-between items-center mb-4">
+              <h3 className="font-display text-lg font-semibold text-white">Popular for you</h3>
+              <button onClick={() => router.push("/search")} className="text-sm text-ice font-semibold hover:underline">see all →</button>
+            </motion.div>
+
+            <div className="flex flex-col gap-3">
+              {(POPULAR_FROM[userOriginCode] ?? POPULAR_FROM[DEFAULT_CODE]).map((r) => (
+                <motion.button key={r.route} variants={fadeUp}
+                  onClick={() => router.push(`/search?origin=${r.fromCode}&destination=${r.toCode}`)}
+                  className="group flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white rounded-2xl p-4 md:p-5 text-left hover:shadow-[0_8px_24px_-12px_rgba(61,220,255,0.4)] transition-all gap-3 sm:gap-0">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-md mb-0.5 ${r.tagColor}`}>{r.tag}</span>
+                    <div className="font-display font-semibold text-sm md:text-base text-ink">{r.route}</div>
+                    <div className="text-[10px] md:text-xs text-mist">{r.detail}</div>
+                  </div>
+                  <div className="text-left sm:text-right shrink-0">
+                    <b className="font-display text-base md:text-lg text-ink block">{r.price}</b>
+                    <div className="text-[9px] md:text-[10px] uppercase tracking-wider text-mist mt-1 font-semibold">all-in</div>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        </section>
+
+        {/* ── White section ── */}
+        <section className="bg-white text-ink rounded-t-[40px] px-6 md:px-10 pt-24 md:pt-36 pb-16 md:pb-24">
+          <div className="max-w-6xl mx-auto">
+
+            {/* Stats bar */}
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-px bg-line rounded-2xl overflow-hidden mb-24 md:mb-36 border border-line">
+              {[
+                { value: "200+", label: "Active routes" },
+                { value: "40+", label: "Airlines covered" },
+                { value: "$0", label: "Hidden fees. Ever." },
+                { value: "< 2 min", label: "WhatsApp response" },
+              ].map((stat) => (
+                <div key={stat.label} className="bg-white px-6 py-8 md:py-10 text-center">
+                  <div className="font-display text-2xl md:text-3xl font-bold text-indigo mb-1">{stat.value}</div>
+                  <div className="text-xs md:text-sm text-mist font-medium">{stat.label}</div>
+                </div>
+              ))}
+            </motion.div>
+
+            {/* Corridors */}
+            <div className="mb-24 md:mb-36">
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <span className="font-mono text-xs tracking-widest text-[#1C9BB8] uppercase mb-4 block">The corridors we know</span>
+                <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-5">Routes built for the diaspora.</h2>
+                <p className="text-mist text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+                  Generic booking tools ignore these corridors. We don&apos;t. Every route below is fully priced before checkout.
+                </p>
+              </motion.div>
+
+              <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {(ROUTES_FROM[userOriginCode] ?? ROUTES_TO[userOriginCode] ?? ROUTES_TO[DEFAULT_CODE]).map((c) => {
+                  const fromCode = userOriginCode;
+                  const fromCity = userOriginCity;
+                  return (
+                    <motion.button key={`${fromCode}-${c.toCode}`} variants={fadeUp}
+                      onClick={() => router.push(`/search?origin=${fromCode}&destination=${c.toCode}`)}
+                      className="group text-left bg-offwhite hover:bg-white border border-transparent hover:border-line rounded-2xl p-5 transition-all hover:shadow-[0_8px_24px_-8px_rgba(10,17,40,0.12)]">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-bold text-indigo">{fromCode}</span>
+                          <PlaneTakeoff className="w-3.5 h-3.5 text-mist" />
+                          <span className="font-mono text-sm font-bold text-indigo">{c.toCode}</span>
+                        </div>
+                        {c.tag && <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo/5 text-indigo px-2 py-0.5 rounded-full">{c.tag}</span>}
+                      </div>
+                      <div className="font-display font-semibold text-base text-ink mb-1">{fromCity} → {c.to}</div>
+                      <div className="text-xs text-mist mb-4">{c.airlines}</div>
+                      <div className="flex items-center gap-1 text-xs font-semibold text-[#1C9BB8] group-hover:gap-2 transition-all">
+                        Search this route <ArrowRight className="w-3.5 h-3.5" />
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
+            </div>
+
+            {/* 3 Pillars */}
+            <div className="mb-0">
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+                <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-5">Built for the Diaspora.</h2>
+                <p className="text-mist text-base md:text-xl max-w-2xl mx-auto leading-relaxed">
+                  We removed every source of friction specific to diaspora travel — before, during, and after the flight.
+                </p>
+              </motion.div>
+
+              <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }}
+                className="grid md:grid-cols-3 gap-8">
+                {[
+                  { icon: <ShieldCheck className="w-7 h-7" />, color: "bg-[#E8FBFF] text-[#1C9BB8]", title: "Total Transparency", body: "What you see is what you pay. Base fare, taxes, and baggage shown explicitly on every result — not added at checkout.", tag: null },
+                  { icon: <HeartHandshake className="w-7 h-7" />, color: "bg-[#E5E9FA] text-[#4152B0]", title: "Instant Human Support", body: "Reach a real Synqed Air agent in under 2 minutes on WhatsApp. Delays, changes, and refunds handled — no bot loops, ever.", tag: null },
+                  { icon: <Smartphone className="w-7 h-7" />, color: "bg-indigo/5 text-indigo", title: "AI Travel Companion", body: "Visa requirements, weather, automatic check-in, and real-time gate alerts — delivered to your phone precisely when you need them.", tag: "In the app" },
+                ].map((p) => (
+                  <motion.div key={p.title} variants={fadeUp}
+                    className="flex flex-col bg-offwhite rounded-3xl p-9 border border-line hover:border-[#C9F1FC] hover:bg-white transition-all">
+                    <div className={`w-16 h-16 rounded-2xl ${p.color} flex items-center justify-center mb-7`}>{p.icon}</div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <h3 className="font-display text-xl font-semibold">{p.title}</h3>
+                      {p.tag && <span className="text-[9px] font-bold uppercase tracking-wider bg-indigo text-white px-2 py-0.5 rounded-full">{p.tag}</span>}
+                    </div>
+                    <p className="text-mist leading-relaxed text-base">{p.body}</p>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
+
+
+          {/* ── Combined App + Waitlist ── */}
+          <div id="waitlist" className="bg-indigo rounded-3xl mx-auto relative overflow-hidden mt-16">
+
+            {/* Glow */}
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute -top-20 -right-20 w-[500px] h-[500px] rounded-full bg-[#1C9BB8]/20 blur-[120px]" />
+              <div className="absolute bottom-0 left-1/3 w-[400px] h-[300px] rounded-full bg-[#1C9BB8]/10 blur-[100px]" />
+            </div>
+
+            <div className="relative z-10 px-8 md:px-16 lg:px-24 py-20 md:py-32">
+
+              {/* App info row */}
+              <div className="pb-16 mb-16 border-b border-white/10">
+                <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
+                  <span className="w-2 h-2 rounded-full bg-ice animate-pulse" />
+                  <span className="text-xs font-semibold text-ice tracking-widest uppercase">Launching Dec 31</span>
+                </div>
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-12">
+                  <div className="max-w-2xl">
+                    <h2 className="font-display text-4xl md:text-5xl font-semibold text-white mb-5 leading-tight">
+                      The full experience is in the app.
+                    </h2>
+                    <p className="text-white/60 text-base md:text-lg leading-relaxed">
+                      Book on the web. Then unlock the AI Travel Companion, automatic check-in, visa alerts, smart refunds, and real-time gate alerts in the Synqed Air app.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3 shrink-0">
+                    {["Automatic check-in", "Visa alerts", "Smart refunds", "Gate alerts"].map((feat) => (
+                      <div key={feat} className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-xl px-5 py-3 text-sm font-medium text-white/80">
+                        <Check className="w-4 h-4 text-ice shrink-0" /> {feat}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Waitlist form */}
+              <div className="max-w-xl mx-auto text-center">
+                {!waitlistDone ? (
+                  <motion.div key="form" initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
+                    <h2 className="font-display text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-white mb-5">
+                      Your seat doesn&apos;t have to wait.
+                    </h2>
+                    <p className="text-ice/75 text-base md:text-lg leading-relaxed mb-10 max-w-lg mx-auto">
+                      Drop your email and we&apos;ll notify you the moment the app goes live — early joiners get priority access and a launch-week fare credit.
+                    </p>
+                    <form onSubmit={handleWaitlist} className="flex flex-col gap-4 max-w-md mx-auto">
+                      <input id="waitlist-email" type="email" required value={waitlistEmail}
+                        onChange={(e) => setWaitlistEmail(e.target.value)} disabled={waitlistLoading}
+                        placeholder="Your email address"
+                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-6 py-4 text-base outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
+                      <input id="waitlist-whatsapp" type="tel" value={waitlistWhatsapp}
+                        onChange={(e) => setWaitlistWhatsapp(e.target.value)} disabled={waitlistLoading}
+                        placeholder="WhatsApp number (optional) +1…"
+                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-6 py-4 text-base outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
+                      {waitlistError && <p className="text-red-300 text-sm text-center">{waitlistError}</p>}
+                      <button type="submit" disabled={waitlistLoading || !waitlistEmail.trim()}
+                        className="w-full bg-white text-indigo font-semibold py-4 rounded-2xl hover:bg-ice transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-base shadow-[0_4px_24px_-8px_rgba(255,255,255,0.25)]">
+                        {waitlistLoading
+                          ? <><Loader2 className="w-5 h-5 animate-spin" /> Securing your spot…</>
+                          : <>Get early access <ArrowRight className="w-5 h-5" /></>}
+                      </button>
+                      <p className="text-white/30 text-sm mt-1">No spam. One email when we launch — that&apos;s it.</p>
+                    </form>
+                  </motion.div>
+                ) : (
+                  <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
+                    className="flex flex-col items-center gap-6">
+                    <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+                      <Check className="w-9 h-9 text-[#3DDCFF]" />
+                    </div>
+                    <div>
+                      <h2 className="font-display text-3xl md:text-4xl font-semibold text-white mb-3">You&apos;re on the list.</h2>
+                      <p className="text-ice/70 text-base md:text-lg max-w-md mx-auto">
+                        We&apos;ll message you the moment the app is live. Check WhatsApp too if you shared your number.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+            </div>
+          </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      <div className="bg-white pt-6">
+        <Footer />
+      </div>
+    </div>
+  );
+}

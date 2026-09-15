@@ -1,0 +1,194 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { FlightOffer } from "@/types";
+import { 
+  getCurrencyFromCountry, 
+  formatCurrency,
+  fetchExchangeRates,
+  calculateDynamicBookingFee
+} from "@/lib/currency";
+
+export default function FlightOfferCard({
+  offer,
+}: {
+  offer: FlightOffer;
+}) {
+  const router = useRouter();
+  const [userCurrency, setUserCurrency] = useState("USD");
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({});
+  const [convertedPrice, setConvertedPrice] = useState<number | null>(null);
+  const [convertedFees, setConvertedFees] = useState<Record<string, number>>({});
+  const [displayPrice, setDisplayPrice] = useState<number>(0); // Final price to display
+  const [displayBookingFee, setDisplayBookingFee] = useState<number>(20); // Booking fee to display
+
+  useEffect(() => {
+    // Get user's country code from localStorage (set by homepage)
+    const cachedCountry = localStorage.getItem("synqed_country_code");
+    const countryCode = cachedCountry || "US";
+    
+    // Determine user's currency based on country
+    const currency = getCurrencyFromCountry(countryCode);
+    setUserCurrency(currency);
+
+    // Fetch exchange rates
+    fetchExchangeRates().then((rates) => {
+      setExchangeRates(rates);
+      
+      // Calculate dynamic booking fee based on user location
+      const bookingFeeConfig = calculateDynamicBookingFee(currency, rates);
+      setDisplayBookingFee(bookingFeeConfig.baseFeeUSD); // Always $20 USD
+      
+      // Calculate total with booking fee (base price + $20)
+      const basePrice = offer.fees.total; // Price from API (without booking fee)
+      const totalWithBookingFee = basePrice + 20; // Add $20 booking fee
+      
+      setDisplayPrice(totalWithBookingFee); // USD price to display
+      
+      // Convert all prices to user's currency for brackets
+      if (currency !== "USD" && rates[currency]) {
+        const rate = rates[currency];
+        // Assuming offer fees are in USD
+        setConvertedPrice(totalWithBookingFee * rate);
+        setConvertedFees({
+          fare: offer.fees.fare * rate,
+          taxes: offer.fees.taxes * rate,
+          bags: offer.fees.bags * rate,
+          bookingFee: 20 * rate, // $20 converted to local currency
+        });
+      } else {
+        // For USD users, no conversion needed
+        setConvertedPrice(null);
+        setConvertedFees({
+          fare: offer.fees.fare,
+          taxes: offer.fees.taxes,
+          bags: offer.fees.bags,
+          bookingFee: 20,
+        });
+      }
+    });
+  }, [offer.id]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatLocalCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: userCurrency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const formatTime = (isoString: string) => {
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    } catch {
+      return "";
+    }
+  };
+
+  const formatDuration = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+  };
+
+  const renderRankingBadges = () => {
+    if (!offer.ranking || offer.ranking.length === 0) return null;
+    
+    return (
+      <div className="flex gap-2 mb-3">
+        {offer.ranking.includes("best_value") && (
+          <span className="bg-indigo text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Best Value</span>
+        )}
+        {offer.ranking.includes("cheapest") && (
+          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Cheapest</span>
+        )}
+        {offer.ranking.includes("fastest") && (
+          <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">Fastest</span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <motion.button 
+      whileHover={{ y: -6 }}
+      onClick={() => router.push(`/checkout/${offer.id}`)}
+      className="w-full text-left bg-white rounded-2xl p-5 shadow-[0_10px_20px_-14px_rgba(10,17,40,.25)] hover:shadow-[0_14px_28px_-12px_rgba(10,17,40,.35)] transition-shadow"
+    >
+      {renderRankingBadges()}
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+        <div>
+          <div className="text-xs text-mist font-medium">{offer.airline} · {offer.flightNumber}</div>
+          <div className="font-display font-semibold text-base md:text-lg text-ink mt-1">
+            {formatTime(offer.departAt)} — {formatTime(offer.arriveAt)}
+          </div>
+        </div>
+        <div className="text-left sm:text-right">
+          <b className="font-display text-lg md:text-xl text-ink block">{formatCurrency(displayPrice)}</b>
+          {convertedPrice && userCurrency !== "USD" && (
+            <div className="text-xs text-mist mt-1">
+              ({formatLocalCurrency(convertedPrice)})
+            </div>
+          )}
+          <div className="text-[9px] md:text-[10px] text-[#2E7D3B] font-bold uppercase tracking-wider mt-0.5">
+            ✓ all fees included
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 my-4">
+        <div className="flex-1 h-px bg-line relative">
+          <div className="absolute left-0 -top-[2px] w-[5px] h-[5px] rounded-full bg-mist"></div>
+          <div className="absolute right-0 -top-[2px] w-[5px] h-[5px] rounded-full bg-[#1C9BB8]"></div>
+        </div>
+      </div>
+
+      <div className="text-xs text-mist text-center mb-3">
+        {offer.stops === 0 ? `Direct · ${formatDuration(offer.durationMinutes)}` : `${offer.stops} stop${offer.stops > 1 ? "s" : ""} · ${offer.stopAirport} · ${formatDuration(offer.durationMinutes)}`}
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-dashed border-line">
+        <div className="text-[10px] md:text-[11px] text-mist text-left">
+          Fare
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.fare)}</b>
+          {convertedFees.fare && userCurrency !== "USD" && (
+            <div className="text-[9px] text-mist">({formatLocalCurrency(convertedFees.fare)})</div>
+          )}
+        </div>
+        <div className="text-[10px] md:text-[11px] text-mist text-center">
+          Taxes
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.taxes)}</b>
+          {convertedFees.taxes && userCurrency !== "USD" && (
+            <div className="text-[9px] text-mist">({formatLocalCurrency(convertedFees.taxes)})</div>
+          )}
+        </div>
+        <div className="text-[10px] md:text-[11px] text-mist text-center">
+          Bags
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.bags)}</b>
+          {convertedFees.bags && userCurrency !== "USD" && (
+            <div className="text-[9px] text-mist">({formatLocalCurrency(convertedFees.bags)})</div>
+          )}
+        </div>
+        <div className="text-[10px] md:text-[11px] text-mist text-right">
+          Booking Fee
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(displayBookingFee)}</b>
+          {convertedFees.bookingFee && userCurrency !== "USD" && (
+            <div className="text-[9px] text-mist">({formatLocalCurrency(convertedFees.bookingFee)})</div>
+          )}
+        </div>
+      </div>
+    </motion.button>
+  );
+}
