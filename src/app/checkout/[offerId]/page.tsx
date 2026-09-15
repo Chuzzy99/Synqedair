@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { DuffelAncillaries } from "@duffel/components";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Nav from "@/components/Nav";
+import { convertUSDToCurrency, getStoredLocation, getUserLocation, getPaystackCurrency, getCurrencySymbol } from "@/lib/currency";
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -22,6 +23,11 @@ export default function CheckoutPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
 
   const [ancillariesPayload, setAncillariesPayload] = useState<any>(null);
+
+  // Currency State (initialized safely)
+  const [localCurrency, setLocalCurrency] = useState<string>("USD");
+  const [localTotalPrice, setLocalTotalPrice] = useState<number | null>(null);
+  const [paymentCurrency, setPaymentCurrency] = useState<string>("USD");
 
   useEffect(() => {
     async function init() {
@@ -63,6 +69,61 @@ export default function CheckoutPage() {
             }))
           );
         }
+      } catch (e) {
+        console.error("Checkout init failed:", e);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+    init();
+  }, [offerId]);
+
+  // Separate useEffect for currency detection - won't crash the page if it fails
+  useEffect(() => {
+    async function detectCurrency() {
+      try {
+        // Try to get stored location first
+        const stored = getStoredLocation();
+        if (stored) {
+          setLocalCurrency(stored.currency);
+          const paystackCurrency = getPaystackCurrency(stored.currency);
+          setPaymentCurrency(paystackCurrency);
+        } else {
+          // Fetch location if not stored
+          const location = await getUserLocation();
+          setLocalCurrency(location.currency);
+          const paystackCurrency = getPaystackCurrency(location.currency);
+          setPaymentCurrency(paystackCurrency);
+        }
+      } catch (currencyError) {
+        console.error("Currency detection failed, using USD:", currencyError);
+        // Silently fail - page continues to work with USD
+        setLocalCurrency("USD");
+        setPaymentCurrency("USD");
+      }
+    }
+    detectCurrency();
+  }, []);
+
+  // Separate useEffect for price conversion - won't crash the page if it fails
+  useEffect(() => {
+    async function convertPrice() {
+      try {
+        if (totalPrice > 0 && localCurrency !== "USD") {
+          const converted = await convertUSDToCurrency(totalPrice, localCurrency);
+          setLocalTotalPrice(converted);
+        } else {
+          setLocalTotalPrice(totalPrice);
+        }
+      } catch (conversionError) {
+        console.error("Price conversion failed, using USD:", conversionError);
+        // Silently fail - page continues to work with USD price
+        setLocalTotalPrice(totalPrice);
+      }
+    }
+    convertPrice();
+  }, [totalPrice, localCurrency]);
 
 
       } catch (e) {
@@ -154,6 +215,10 @@ export default function CheckoutPage() {
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
       const callbackUrl = `${window.location.origin}/success`;
 
+      // Use converted price if available, otherwise use base price
+      const paymentAmount = localTotalPrice || totalPrice;
+      const finalCurrency = paymentCurrency;
+
       // Call backend to initialize payment
       const res = await fetch(`${BACKEND_URL}/api/bookings`, {
         method: "POST",
@@ -163,8 +228,8 @@ export default function CheckoutPage() {
           passengerName: passengersData[0]?.first_name + " " + passengersData[0]?.last_name,
           passengerEmail: email,
           passengerPhone: phoneNumber,
-          amount: totalPrice,
-          currency: offer.total_currency,
+          amount: paymentAmount,
+          currency: finalCurrency,
           callbackUrl,
         }),
       });
@@ -321,6 +386,20 @@ export default function CheckoutPage() {
               <span>Total</span>
               <span className="text-indigo">{offer.total_currency} {totalPrice.toFixed(2)}</span>
             </div>
+
+            {localTotalPrice !== null && localCurrency !== "USD" && (
+              <div className="bg-[#E8FBFF] p-3 rounded-xl mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-[#1C9BB8] font-medium">Payable in {localCurrency}</span>
+                  <span className="text-lg font-bold text-[#1C9BB8]">{getCurrencySymbol(localCurrency)}{localTotalPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
+                </div>
+                {paymentCurrency !== localCurrency && (
+                  <p className="text-xs text-[#1C9BB8] mt-1">
+                    Processed in {paymentCurrency} via Paystack
+                  </p>
+                )}
+              </div>
+            )}
 
             {!isFormValid && (
               <p className="text-xs text-red-500 mb-4 text-center bg-red-50 p-2 rounded-xl">Please fill out all passenger details before paying.</p>
