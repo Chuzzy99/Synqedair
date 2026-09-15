@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Missing Duffel token" }, { status: 500 });
     }
 
-    const passengers = JSON.parse(order.passengerDetails);
+    const passengers = JSON.parse(order.passengerDetails || "{}");
     
     const res = await fetch("https://api.duffel.com/air/orders", {
       method: "POST",

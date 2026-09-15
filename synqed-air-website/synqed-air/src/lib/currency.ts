@@ -59,7 +59,7 @@ const FALLBACK_RATES: ExchangeRates = {
   QAR: 3.64, // Qatari Riyal
 };
 
-let cachedRates: ExchangeRates | null = null;
+let cachedRates: ExchangeRates = FALLBACK_RATES;
 let lastFetchTime: number = 0;
 const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
 
@@ -71,7 +71,7 @@ export async function fetchExchangeRates(): Promise<ExchangeRates> {
   const now = Date.now();
   
   // Return cached rates if still valid
-  if (cachedRates && (now - lastFetchTime) < CACHE_DURATION) {
+  if ((now - lastFetchTime) < CACHE_DURATION) {
     return cachedRates;
   }
 
