@@ -4,7 +4,7 @@ export interface FeeBreakdown {
   fare:       number;
   taxes:      number;
   bags:       number;
-  serviceFee: number;
+  bookingFee: number;
   total:      number;
   currency:   string;
 }

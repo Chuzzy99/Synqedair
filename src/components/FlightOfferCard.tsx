@@ -54,9 +54,9 @@ export default function FlightOfferCard({
   };
 
   return (
-    <motion.button 
+    <motion.button
       whileHover={{ y: -6 }}
-      onClick={() => router.push(`/companion?offerId=${offer.id}`)}
+      onClick={() => router.push(`/checkout/${offer.id}`)}
       className="w-full text-left bg-white rounded-2xl p-5 shadow-[0_10px_20px_-14px_rgba(10,17,40,.25)] hover:shadow-[0_14px_28px_-12px_rgba(10,17,40,.35)] transition-shadow"
     >
       {renderRankingBadges()}
@@ -101,8 +101,8 @@ export default function FlightOfferCard({
           <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.bags)}</b>
         </div>
         <div className="text-[10px] md:text-[11px] text-mist text-right">
-          Service Fee
-          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.serviceFee)}</b>
+          Booking Fee
+          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.bookingFee)}</b>
         </div>
       </div>
     </motion.button>

@@ -91,7 +91,8 @@ export default function CheckoutPage() {
   const ancillariesPrice = ancillariesPayload?.services
     ? ancillariesPayload.services.reduce((acc: number, s: any) => acc + parseFloat(s.total_amount), 0)
     : 0;
-  const totalPrice = basePrice + ancillariesPrice;
+  const bookingFee = 20; // $20 USD booking fee
+  const totalPrice = basePrice + ancillariesPrice + bookingFee;
 
 
   const handlePaystackSuccessAction = async (reference: any) => {
@@ -295,6 +296,11 @@ export default function CheckoutPage() {
                 <span className="font-semibold">{offer.total_currency} {ancillariesPrice.toFixed(2)}</span>
               </div>
             )}
+
+            <div className="flex justify-between items-center py-3 border-b border-line">
+              <span className="text-mist">Booking Fee</span>
+              <span className="font-semibold">{offer.total_currency} {bookingFee.toFixed(2)}</span>
+            </div>
 
             <div className="flex justify-between items-center py-5 text-xl font-bold">
               <span>Total</span>
