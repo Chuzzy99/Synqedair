@@ -62,6 +62,9 @@ const CACHE_DURATION = 6 * 60 * 60 * 1000; // 6 hours
 export async function getUserLocation(): Promise<{ country: string; currency: string }> {
   try {
     const response = await fetch("https://ipapi.co/json/");
+    if (!response.ok) {
+      throw new Error("Location API failed");
+    }
     const data = await response.json();
 
     const country = data.country_code || "US";
@@ -69,9 +72,13 @@ export async function getUserLocation(): Promise<{ country: string; currency: st
 
     // Store in localStorage for persistence
     if (typeof window !== "undefined") {
-      localStorage.setItem("synqed_country_code", country);
-      localStorage.setItem("synqed_currency", currency);
-      localStorage.setItem("synqed_last_location", Date.now().toString());
+      try {
+        localStorage.setItem("synqed_country_code", country);
+        localStorage.setItem("synqed_currency", currency);
+        localStorage.setItem("synqed_last_location", Date.now().toString());
+      } catch (storageError) {
+        console.error("LocalStorage access failed:", storageError);
+      }
     }
 
     return { country, currency };

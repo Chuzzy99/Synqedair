@@ -17,18 +17,24 @@ export default function FlightOfferCard({
 
   useEffect(() => {
     async function initCurrency() {
-      // Try to get stored location first
-      const stored = getStoredLocation();
-      if (stored) {
-        setLocalCurrency(stored.currency);
-        const converted = await convertUSDToCurrency(offer.fees.total, stored.currency);
-        setLocalPrice(converted);
-      } else {
-        // Fetch location if not stored
-        const location = await getUserLocation();
-        setLocalCurrency(location.currency);
-        const converted = await convertUSDToCurrency(offer.fees.total, location.currency);
-        setLocalPrice(converted);
+      try {
+        // Try to get stored location first
+        const stored = getStoredLocation();
+        if (stored) {
+          setLocalCurrency(stored.currency);
+          const converted = await convertUSDToCurrency(offer.fees.total, stored.currency);
+          setLocalPrice(converted);
+        } else {
+          // Fetch location if not stored
+          const location = await getUserLocation();
+          setLocalCurrency(location.currency);
+          const converted = await convertUSDToCurrency(offer.fees.total, location.currency);
+          setLocalPrice(converted);
+        }
+      } catch (error) {
+        console.error("Currency conversion failed:", error);
+        setLocalCurrency("USD");
+        setLocalPrice(null);
       }
     }
     initCurrency();

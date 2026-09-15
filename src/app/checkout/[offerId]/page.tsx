@@ -61,16 +61,22 @@ export default function CheckoutPage() {
         }
 
         // Get user location and currency
-        const stored = getStoredLocation();
-        if (stored) {
-          setLocalCurrency(stored.currency);
-          const paystackCurrency = getPaystackCurrency(stored.currency);
-          setPaymentCurrency(paystackCurrency);
-        } else {
-          const location = await getUserLocation();
-          setLocalCurrency(location.currency);
-          const paystackCurrency = getPaystackCurrency(location.currency);
-          setPaymentCurrency(paystackCurrency);
+        try {
+          const stored = getStoredLocation();
+          if (stored) {
+            setLocalCurrency(stored.currency);
+            const paystackCurrency = getPaystackCurrency(stored.currency);
+            setPaymentCurrency(paystackCurrency);
+          } else {
+            const location = await getUserLocation();
+            setLocalCurrency(location.currency);
+            const paystackCurrency = getPaystackCurrency(location.currency);
+            setPaymentCurrency(paystackCurrency);
+          }
+        } catch (currencyError) {
+          console.error("Currency detection failed, using USD:", currencyError);
+          setLocalCurrency("USD");
+          setPaymentCurrency("USD");
         }
       } catch (e) {
         console.error(e);
