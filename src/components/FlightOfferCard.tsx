@@ -120,22 +120,18 @@ export default function FlightOfferCard({
         {offer.stops === 0 ? `Direct · ${formatDuration(offer.durationMinutes)}` : `${offer.stops} stop${offer.stops > 1 ? "s" : ""} · ${offer.stopAirport} · ${formatDuration(offer.durationMinutes)}`}
       </div>
 
-      <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-dashed border-line">
+      <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-dashed border-line">
         <div className="text-[10px] md:text-[11px] text-mist text-left">
-          Fare
+          Fare (incl. service fee)
           <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.fare)}</b>
         </div>
         <div className="text-[10px] md:text-[11px] text-mist text-center">
           Taxes
           <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.taxes)}</b>
         </div>
-        <div className="text-[10px] md:text-[11px] text-mist text-center">
+        <div className="text-[10px] md:text-[11px] text-mist text-right">
           Bags
           <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.bags)}</b>
-        </div>
-        <div className="text-[10px] md:text-[11px] text-mist text-right">
-          Booking Fee
-          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.bookingFee)}</b>
         </div>
       </div>
     </motion.button>

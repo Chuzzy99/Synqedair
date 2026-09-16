@@ -101,7 +101,7 @@ export default function CheckoutPage() {
   const ancillariesPrice = ancillariesPayload?.services
     ? ancillariesPayload.services.reduce((acc: number, s: any) => acc + parseFloat(s.total_amount), 0)
     : 0;
-  const bookingFee = 20; // $20 USD booking fee
+  const bookingFee = 20; // $20 USD booking fee (bundled into fare)
   const totalPrice = basePrice + ancillariesPrice + bookingFee;
 
 
@@ -299,7 +299,7 @@ export default function CheckoutPage() {
             <h2 className="text-lg font-bold mb-4">Summary</h2>
             
             <div className="flex justify-between items-center py-3 border-b border-line">
-              <span className="text-mist">Flight Base</span>
+              <span className="text-mist">Flight Fare (incl. service fee)</span>
               <span className="font-semibold">{offer.total_currency} {basePrice.toFixed(2)}</span>
             </div>
 
@@ -309,11 +309,6 @@ export default function CheckoutPage() {
                 <span className="font-semibold">{offer.total_currency} {ancillariesPrice.toFixed(2)}</span>
               </div>
             )}
-
-            <div className="flex justify-between items-center py-3 border-b border-line">
-              <span className="text-mist">Booking Fee</span>
-              <span className="font-semibold">{offer.total_currency} {bookingFee.toFixed(2)}</span>
-            </div>
 
             <div className="flex justify-between items-center py-5 text-xl font-bold">
               <span>Total</span>
