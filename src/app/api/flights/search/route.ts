@@ -43,13 +43,13 @@ function mapOffer(offer: any) {
   }
 
   // Convert USD-equivalent for non-USD currencies (Duffel handles this)
-  const bookingFee = 20; // $20 USD booking fee (bundled into fare)
+  const bookingFee = 20; // $20 USD booking fee (truly bundled into fare)
   const fees = {
-    fare:       baseAmount + bookingFee, // Bundle booking fee into fare
+    fare:       baseAmount + bookingFee, // Fare includes booking fee
     taxes:      taxAmount,
     bags:       0,       // Duffel baggages are separate — keeping $0 for now
-    bookingFee: 0,       // Hidden - bundled into fare
-    total:      totalAmount + bookingFee,
+    bookingFee: 0,       // Hidden - truly bundled into fare
+    total:      baseAmount + bookingFee + taxAmount, // True total with bundled fee
     currency,
   };
 

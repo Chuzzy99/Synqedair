@@ -97,12 +97,13 @@ export default function CheckoutPage() {
   }
 
   // Calculate prices
-  const basePrice = parseFloat(offer.total_amount);
+  const duffelBasePrice = parseFloat(offer.total_amount);
+  const bookingFee = 20; // $20 USD booking fee (truly bundled into fare)
+  const basePrice = duffelBasePrice + bookingFee; // Fare includes booking fee
   const ancillariesPrice = ancillariesPayload?.services
     ? ancillariesPayload.services.reduce((acc: number, s: any) => acc + parseFloat(s.total_amount), 0)
     : 0;
-  const bookingFee = 20; // $20 USD booking fee (bundled into fare)
-  const totalPrice = basePrice + ancillariesPrice + bookingFee;
+  const totalPrice = basePrice + ancillariesPrice; // Total matches the bundled fare
 
 
 
@@ -152,7 +153,7 @@ export default function CheckoutPage() {
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
       const callbackUrl = `${window.location.origin}/success`;
 
-      // Call backend to initialize payment
+      // Payment uses the total which includes the bundled booking fee
       const res = await fetch(`${BACKEND_URL}/api/bookings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -299,7 +300,7 @@ export default function CheckoutPage() {
             <h2 className="text-lg font-bold mb-4">Summary</h2>
             
             <div className="flex justify-between items-center py-3 border-b border-line">
-              <span className="text-mist">Flight Fare (incl. service fee)</span>
+              <span className="text-mist">Flight Fare</span>
               <span className="font-semibold">{offer.total_currency} {basePrice.toFixed(2)}</span>
             </div>
 

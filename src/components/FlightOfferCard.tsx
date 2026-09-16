@@ -122,7 +122,7 @@ export default function FlightOfferCard({
 
       <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-dashed border-line">
         <div className="text-[10px] md:text-[11px] text-mist text-left">
-          Fare (incl. service fee)
+          Fare
           <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">{formatCurrency(offer.fees.fare)}</b>
         </div>
         <div className="text-[10px] md:text-[11px] text-mist text-center">
