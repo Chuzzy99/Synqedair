@@ -42,11 +42,18 @@ export default function CheckoutPage() {
             const keyData = await keyRes.json();
             if (keyData.client_key) {
               setClientKey(keyData.client_key);
+            } else {
+              // Set to empty string to hide ancillaries section
+              setClientKey("");
             }
+          } else {
+            // Set to empty string to hide ancillaries section
+            setClientKey("");
           }
         } catch (keyError) {
           console.error("Client key fetch failed:", keyError);
-          // Continue without client key - ancillaries won't work but page should load
+          // Set to empty string to hide ancillaries section
+          setClientKey("");
         }
 
         // Initialize passenger form state
@@ -152,6 +159,9 @@ export default function CheckoutPage() {
     try {
       const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
       const callbackUrl = `${window.location.origin}/success`;
+
+      // Use ancillaries if available, otherwise empty array
+      const services = ancillariesPayload?.services || [];
 
       // Payment uses the total which includes the bundled booking fee
       const res = await fetch(`${BACKEND_URL}/api/bookings`, {
@@ -274,10 +284,10 @@ export default function CheckoutPage() {
           </div>
 
           {/* Duffel Ancillaries (Seats, Bags) */}
-          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-line">
-            <h2 className="text-xl font-bold mb-6">Customize Your Trip</h2>
-            <div className="min-h-[300px]">
-              {clientKey ? (
+          {clientKey && (
+            <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-line">
+              <h2 className="text-xl font-bold mb-6">Customize Your Trip</h2>
+              <div className="min-h-[300px]">
                 <DuffelAncillaries
                   offer_id={offer.id}
                   services={offer.available_services || []}
@@ -287,11 +297,9 @@ export default function CheckoutPage() {
                     setAncillariesPayload(payload);
                   }}
                 />
-              ) : (
-                <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-mist" /></div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right Column (Summary & Payment) */}
