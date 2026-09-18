@@ -23,10 +23,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Order not found" }, { status: 404 });
     }
 
-    // 2. Verify the Paystack transaction using the paystackRef via backend API
-    const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
-    const verifyRes = await fetch(`${BACKEND_URL}/api/bookings/verify/${reference}`, {
+    // 2. Verify the Paystack transaction using the paystackRef
+    const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+    if (!PAYSTACK_SECRET) {
+      return NextResponse.json({ success: false, error: "Missing Paystack key" }, { status: 500 });
+    }
+
+    const verifyRes = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
       method: "GET",
+      headers: {
+        "Authorization": `Bearer ${PAYSTACK_SECRET}`
+      }
     });
 
     if (!verifyRes.ok) {
@@ -38,7 +45,7 @@ export async function POST(req: Request) {
     }
 
     const verifyData = await verifyRes.json();
-    if (verifyData.status !== "success") {
+    if (!verifyData.status || verifyData.data.status !== "success") {
       await prisma.order.update({
         where: { id: order.id },
         data: { status: "FAILED" },
@@ -56,6 +63,41 @@ export async function POST(req: Request) {
       where: { id: order.id },
       data: { status: "PAID" },
     });
+
+    // 4.5. Transfer flight cost to subaccount
+    const PAYSTACK_SUBACCOUNT = process.env.PAYSTACK_AIRLINE_SUBACCOUNT || process.env.PAYSTACK_SUBACCOUNT_CODE;
+    const { convertUSDToCurrency } = await import("@/lib/currency");
+    
+    // Paystack verification gives us the actual currency and amount paid
+    const paidCurrency = verifyData.data.currency; // e.g. NGN
+    
+    // We want to keep $20 USD. 
+    const bookingFeeInLocalCurrency = await convertUSDToCurrency(20, paidCurrency);
+    const bookingFeeSmallestUnit = Math.round(bookingFeeInLocalCurrency * 100);
+    
+    const paidAmountSmallestUnit = verifyData.data.amount;
+    const flightCostSmallest = paidAmountSmallestUnit - bookingFeeSmallestUnit;
+
+    if (PAYSTACK_SUBACCOUNT) {
+      try {
+        await fetch("https://api.paystack.co/transfer", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${PAYSTACK_SECRET}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            source: "balance",
+            amount: flightCostSmallest,
+            recipient: PAYSTACK_SUBACCOUNT,
+            reason: `Flight booking payment - ${reference}`,
+            currency: paidCurrency,
+          }),
+        });
+      } catch (err) {
+        console.error("Transfer failed:", err);
+      }
+    }
 
     // 5. Create the Order in Duffel using the stored passenger details
     const DUFFEL_TOKEN = process.env.DUFFEL_ACCESS_TOKEN;

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { DuffelAncillaries } from "@duffel/components";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Nav from "@/components/Nav";
+import { getStoredLocation, getUserLocation, getPaystackCurrency } from "@/lib/currency";
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -13,6 +14,7 @@ export default function CheckoutPage() {
 
   const [offer, setOffer] = useState<any>(null);
   const [clientKey, setClientKey] = useState<string | null>(null);
+  const [localCurrency, setLocalCurrency] = useState<string>("NGN");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -43,17 +45,27 @@ export default function CheckoutPage() {
             if (keyData.client_key) {
               setClientKey(keyData.client_key);
             } else {
-              // Set to empty string to hide ancillaries section
               setClientKey("");
             }
           } else {
-            // Set to empty string to hide ancillaries section
             setClientKey("");
           }
         } catch (keyError) {
           console.error("Client key fetch failed:", keyError);
-          // Set to empty string to hide ancillaries section
           setClientKey("");
+        }
+        
+        // Fetch User Currency
+        try {
+          const stored = getStoredLocation();
+          if (stored) {
+            setLocalCurrency(stored.currency);
+          } else {
+            const location = await getUserLocation();
+            setLocalCurrency(location.currency);
+          }
+        } catch (currencyError) {
+          console.error("Currency fetch failed:", currencyError);
         }
 
         // Initialize passenger form state
@@ -162,9 +174,11 @@ export default function CheckoutPage() {
 
       // Use ancillaries if available, otherwise empty array
       const services = ancillariesPayload?.services || [];
+      
+      const chargeCurrency = getPaystackCurrency(localCurrency);
 
       // Payment uses the total which includes the bundled booking fee
-      const res = await fetch(`${BACKEND_URL}/api/bookings`, {
+      const res = await fetch("/api/bookings/init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -174,7 +188,14 @@ export default function CheckoutPage() {
           passengerPhone: phoneNumber,
           amount: totalPrice,
           currency: offer.total_currency,
+          chargeCurrency: chargeCurrency,
           callbackUrl,
+          passengers: passengersData.map((p) => ({
+            ...p,
+            phone_number: phoneNumber,
+            email: email,
+          })),
+          services,
         }),
       });
 
