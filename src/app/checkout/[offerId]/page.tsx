@@ -14,7 +14,7 @@ export default function CheckoutPage() {
 
   const [offer, setOffer] = useState<any>(null);
   const [clientKey, setClientKey] = useState<string | null>(null);
-  const [localCurrency, setLocalCurrency] = useState<string>("NGN");
+  const [localCurrency, setLocalCurrency] = useState<string>("USD");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
