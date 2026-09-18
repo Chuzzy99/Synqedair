@@ -66,6 +66,15 @@ export async function POST(req: Request) {
       callback_url: callbackUrl,
     };
 
+    console.log("=== PAYSTACK INIT ===");
+    console.log("chargeCurrency received:", chargeCurrency);
+    console.log("targetCurrency:", targetCurrency);
+    console.log("amount (USD):", amount);
+    console.log("amountInTargetCurrency:", amountInTargetCurrency);
+    console.log("amountInSmallestUnit:", amountInSmallestUnit);
+    console.log("email:", passengerEmail);
+    console.log("requestBody:", JSON.stringify(requestBody));
+
     const res = await fetch("https://api.paystack.co/transaction/initialize", {
       method: "POST",
       headers: {
@@ -82,7 +91,8 @@ export async function POST(req: Request) {
         where: { id: order.id },
         data: { status: "FAILED" },
       });
-      return NextResponse.json({ success: false, error: "Failed to initialize payment" }, { status: res.status });
+      // Return the full Paystack error message to the frontend so we can see it
+      return NextResponse.json({ success: false, error: "Failed to initialize payment", paystackError: errorText }, { status: res.status });
     }
 
     const json = await res.json();

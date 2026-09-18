@@ -205,7 +205,7 @@ export default function CheckoutPage() {
         // Redirect to Paystack payment page
         window.location.href = data.paymentAuthorizationUrl;
       } else {
-        alert("Failed to initialize payment");
+        alert("Failed to initialize payment\n" + (data.paystackError || data.error || "Unknown error"));
       }
     } catch (e) {
       console.error(e);
