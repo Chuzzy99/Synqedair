@@ -41,9 +41,7 @@ export const metadata: Metadata = {
       "Book flights on Africa's diaspora corridors. Full price shown upfront — no checkout surprises. Real human support on WhatsApp in under 2 minutes.",
     images: [
       {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
+        url: "/logo.jpg",
         alt: "Synqed Air — Built for the diaspora corridor",
       },
     ],
@@ -53,7 +51,7 @@ export const metadata: Metadata = {
     title: "Synqed Air — Transparent Flight Booking for the Diaspora",
     description:
       "Book flights on Africa's diaspora corridors. Full price, every fee shown, WhatsApp support in 2 minutes.",
-    images: ["/og-image.png"],
+    images: ["/logo.jpg"],
     creator: "@synqedair",
   },
   robots: {
@@ -68,9 +66,9 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: "/logo.jpg",
+    shortcut: "/logo.jpg",
+    apple: "/logo.jpg",
   },
 };
 
