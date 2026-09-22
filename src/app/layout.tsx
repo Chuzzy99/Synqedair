@@ -39,19 +39,13 @@ export const metadata: Metadata = {
     title: "Synqed Air — Transparent Flight Booking for the Diaspora",
     description:
       "Book flights on Africa's diaspora corridors. Full price shown upfront — no checkout surprises. Real human support on WhatsApp in under 2 minutes.",
-    images: [
-      {
-        url: "/logo.jpg",
-        alt: "Synqed Air — Built for the diaspora corridor",
-      },
-    ],
+
   },
   twitter: {
     card: "summary_large_image",
     title: "Synqed Air — Transparent Flight Booking for the Diaspora",
     description:
       "Book flights on Africa's diaspora corridors. Full price, every fee shown, WhatsApp support in 2 minutes.",
-    images: ["/logo.jpg"],
     creator: "@synqedair",
   },
   robots: {
