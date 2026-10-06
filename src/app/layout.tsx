@@ -8,6 +8,7 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "./globals.css";
 
 import FloatingSupportChat from "@/components/FloatingSupportChat";
+import Providers from "../provider/providers";
 
 export const metadata: Metadata = {
   title: {
@@ -83,8 +84,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
-        <FloatingSupportChat />
+        <Providers>
+          {children}
+          <FloatingSupportChat />
+        </Providers>
       </body>
     </html>
   );

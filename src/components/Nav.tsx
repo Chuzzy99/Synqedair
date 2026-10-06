@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import AccountMenu from "@/components/AccountMenu";
+
 export default function Nav() {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -28,7 +30,8 @@ export default function Nav() {
             Support
           </Link>
         </nav>
-        <div className="hidden md:block">
+        <div className="hidden items-center gap-3 md:flex">
+          <AccountMenu variant="desktop" />
           <Link
             href="/search"
             className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-indigo transition-colors hover:bg-offwhite"
@@ -77,10 +80,13 @@ export default function Nav() {
             >
               Support
             </Link>
+
+            <AccountMenu variant="mobile" />
+
             <Link
               href="/search"
               onClick={() => setIsOpen(false)}
-              className="mt-6 rounded-full bg-white px-5 py-3 text-center text-sm font-semibold text-indigo transition-colors hover:bg-offwhite"
+              className="mt-4 rounded-full bg-white px-5 py-3 text-center text-sm font-semibold text-indigo transition-colors hover:bg-offwhite"
             >
               Book a flight
             </Link>
