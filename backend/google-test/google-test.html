@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Google ID Token</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body style="font-family: sans-serif; padding: 24px">
+    <h3>Sign in to get an ID token</h3>
+    <div id="g_id_onload"
+         data-client_id=1039270670157-pkd5d58q7n589vr80nn3abb566ip85bu.apps.googleusercontent.com
+         data-callback="handleCredential"
+         data-auto_prompt="false"></div>
+    <div class="g_id_signin" data-type="standard"></div>
+
+    <p>ID token:</p>
+    <textarea id="out" rows="10" style="width: 100%"></textarea>
+    <button onclick="navigator.clipboard.writeText(document.getElementById('out').value)">
+      Copy
+    </button>
+
+    <script>
+      function handleCredential(response) {
+        document.getElementById('out').value = response.credential;
+      }
+    </script>
+  </body>
+</html>
