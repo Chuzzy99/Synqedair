@@ -15,7 +15,16 @@ const envSchema = z.object({
 
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
 
-  CLIENT_URL: z.string().url(),
+  CLIENT_URL: z
+  .string()
+  .min(1, 'CLIENT_URL is required')
+  .transform((value) =>
+    value
+      .split(',')
+      .map((url) => url.trim().replace(/\/$/, ''))
+      .filter(Boolean),
+  )
+  .pipe(z.array(z.string().url()).min(1)),
 });
 
 const parsed = envSchema.safeParse(process.env);
