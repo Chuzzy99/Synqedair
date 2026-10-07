@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { Toaster } from 'sonner';
 
 import { AuthProvider } from '@/context/authContext';
+import SignInPrompt from '@/components/SigninPrompt';
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
@@ -22,6 +23,7 @@ export default function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           {children}
+          <SignInPrompt />
           <Toaster
             position="top-center"
             toastOptions={{
