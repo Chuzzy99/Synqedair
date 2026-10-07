@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -8,40 +8,33 @@ import { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 import { useAuth } from "@/features/client/auth/auth.hook";
+import { isSnoozed, snooze } from "@/lib/snooze";
 
-const DISMISS_KEY = "synqed_signin_prompt_dismissed_at";
-const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 const SHOW_DELAY_MS = 1200;
-
-const isSnoozed = (): boolean => {
-  try {
-    const raw = localStorage.getItem(DISMISS_KEY);
-    if (!raw) return false;
-    return Date.now() - Number(raw) < SNOOZE_MS;
-  } catch {
-    return false;
-  }
-};
-
-const snooze = () => {
-  try {
-    localStorage.setItem(DISMISS_KEY, String(Date.now()));
-  } catch {
-    // storage unavailable, the modal may show again next visit
-  }
-};
 
 export default function SignInPrompt() {
   const { user, isInitializing, googleLogin, isLoggingIn } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const decided = useRef(false);
 
-  // Show after the session check finishes, if nobody is logged in
+  // Decide once per page load, right after the session check finishes
   useEffect(() => {
-    if (isInitializing || user || isSnoozed()) return;
+    if (isInitializing || decided.current) return;
 
-    const timer = setTimeout(() => setOpen(true), SHOW_DELAY_MS);
+    // Already logged in or snoozed: never show during this page load,
+    // even if the user logs out later
+    if (user || isSnoozed()) {
+      decided.current = true;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      decided.current = true;
+      setOpen(true);
+    }, SHOW_DELAY_MS);
+
     return () => clearTimeout(timer);
   }, [isInitializing, user]);
 

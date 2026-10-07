@@ -3,8 +3,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import * as authApi from '@/features/client/auth/auth.api';
-import { setAccessToken, setRefreshToken } from '../../../client-setup/client';
-import { useAuthContext } from '../../../context/authContext';
+import { setAccessToken, setRefreshToken } from '@/client-setup/client';
+import { useAuthContext } from '@/context/authContext';
+import { snooze } from '@/lib/snooze';
 import type { GoogleLoginPayload } from '@/features/client/auth/auth.type';
 
 export const useAuth = () => {
@@ -30,6 +31,9 @@ export const useAuth = () => {
       setRefreshToken(null);
       setUser(null);
       queryClient.clear();
+
+      // Someone who just logged out shouldn't get the sign-in prompt on their next visit
+      snooze();
     },
   });
 
