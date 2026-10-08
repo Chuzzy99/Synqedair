@@ -8,38 +8,9 @@ import { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 import { useAuth } from "@/features/client/auth/auth.hook";
-import type { User } from "@/features/client/auth/auth.type";
 
 interface AccountMenuProps {
   variant?: "desktop" | "mobile";
-}
-
-const getFirstName = (user: User) =>
-  user.name?.trim().split(" ")[0] || user.email.split("@")[0] || "there";
-
-function Avatar({ user, size }: { user: User; size: "sm" | "lg" }) {
-  const [failed, setFailed] = useState(false);
-  const dimension = size === "sm" ? "h-7 w-7 text-xs" : "h-12 w-12 text-base";
-
-  if (user.avatar && !failed) {
-    return (
-      <img
-        src={user.avatar}
-        alt=""
-        referrerPolicy="no-referrer"
-        onError={() => setFailed(true)}
-        className={`${dimension} shrink-0 rounded-full object-cover ring-2 ring-white/30`}
-      />
-    );
-  }
-
-  return (
-    <span
-      className={`${dimension} flex shrink-0 items-center justify-center rounded-full bg-white/20 font-semibold uppercase ring-2 ring-white/30`}
-    >
-      {(user.name ?? user.email).charAt(0)}
-    </span>
-  );
 }
 
 export default function AccountMenu({ variant = "desktop" }: AccountMenuProps) {
@@ -80,11 +51,9 @@ export default function AccountMenu({ variant = "desktop" }: AccountMenuProps) {
     setError(null);
 
     try {
-      const res = await googleLogin({ idToken: credential });
+      // The welcome toast is shown by the login mutation in useAuth
+      await googleLogin({ idToken: credential });
       setOpen(false);
-      toast.success(`Welcome, ${getFirstName(res.data.user)}!`, {
-        description: "You're now signed in.",
-      });
     } catch (err) {
       setError(
         isAxiosError(err) && err.response?.data?.message
@@ -105,12 +74,30 @@ export default function AccountMenu({ variant = "desktop" }: AccountMenuProps) {
     return (
       <div
         className={`h-10 animate-pulse rounded-full bg-white/10 ${
-          variant === "desktop" ? "w-36" : "mt-4 w-full"
+          variant === "desktop" ? "w-28" : "mt-4 w-full"
         }`}
       />
     );
   }
 
+  // Signed in: a single Logout button replaces the avatar + dropdown
+  if (user) {
+    return (
+      <button
+        type="button"
+        onClick={handleLogout}
+        disabled={isLoggingOut}
+        className={`group inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/30 px-5 text-sm font-semibold text-white transition-colors hover:border-white/50 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 active:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60 ${
+          variant === "mobile" ? "mt-4 w-full" : ""
+        }`}
+      >
+        <LogOut className="h-4 w-4 shrink-0 opacity-80 transition-transform group-hover:translate-x-0.5" />
+        <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+      </button>
+    );
+  }
+
+  // Signed out: "My account" button with the Google sign-in panel
   const panelPosition =
     variant === "desktop"
       ? "absolute right-0 top-full z-50 mt-3 w-72"
@@ -126,16 +113,10 @@ export default function AccountMenu({ variant = "desktop" }: AccountMenuProps) {
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
         aria-haspopup="true"
+        aria-label="My account"
         className="flex w-full items-center justify-center gap-2 rounded-full border border-white/30 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
       >
-        {user ? (
-          <>
-            <Avatar user={user} size="sm" />
-            <span className="max-w-[7rem] truncate">{getFirstName(user)}</span>
-          </>
-        ) : (
-          <span className="py-0.5">My account</span>
-        )}
+        <span className="py-0.5">My account</span>
         <ChevronDown
           className={`h-3.5 w-3.5 shrink-0 opacity-70 transition-transform ${
             open ? "rotate-180" : ""
@@ -157,63 +138,32 @@ export default function AccountMenu({ variant = "desktop" }: AccountMenuProps) {
             <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/10 blur-2xl" />
 
             <div className="relative p-5">
-              {user ? (
-                <>
-                  <div className="flex items-center gap-3">
-                    <Avatar user={user} size="lg" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">
-                        {user.name ?? "Your account"}
-                      </p>
-                      <p className="truncate text-xs text-[#AEB6CC]">{user.email}</p>
-                    </div>
-                  </div>
+              <p className="text-base font-semibold">Welcome to Synqed Air</p>
+              <p className="mt-1 text-xs text-[#AEB6CC]">
+                Sign in to manage your bookings.
+              </p>
 
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-[#AEB6CC]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                    Signed in
-                  </div>
+              <div className="mt-5 flex justify-center">
+                {isLoggingIn ? (
+                  <p className="py-2.5 text-sm text-[#AEB6CC]">Signing you in...</p>
+                ) : (
+                  <GoogleLogin
+                    onSuccess={(res) => handleGoogleSuccess(res.credential)}
+                    onError={() =>
+                      setError("Google sign in failed. Please try again.")
+                    }
+                    text="continue_with"
+                    shape="pill"
+                    theme="outline"
+                    width="256"
+                  />
+                )}
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={isLoggingOut}
-                    className="mt-4 flex w-full items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm font-medium text-white/90 transition-colors hover:bg-white/10 disabled:opacity-60"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    {isLoggingOut ? "Logging out..." : "Log out"}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-base font-semibold">Welcome to Synqed Air</p>
-                  <p className="mt-1 text-xs text-[#AEB6CC]">
-                    Sign in to manage your bookings.
-                  </p>
-
-                  <div className="mt-5 flex justify-center">
-                    {isLoggingIn ? (
-                      <p className="py-2.5 text-sm text-[#AEB6CC]">Signing you in...</p>
-                    ) : (
-                      <GoogleLogin
-                        onSuccess={(res) => handleGoogleSuccess(res.credential)}
-                        onError={() =>
-                          setError("Google sign in failed. Please try again.")
-                        }
-                        text="continue_with"
-                        shape="pill"
-                        theme="outline"
-                        width="256"
-                      />
-                    )}
-                  </div>
-
-                  {error && (
-                    <p className="mt-4 rounded-lg bg-red-500/15 px-3 py-2 text-xs text-red-200">
-                      {error}
-                    </p>
-                  )}
-                </>
+              {error && (
+                <p className="mt-4 rounded-lg bg-red-500/15 px-3 py-2 text-xs text-red-200">
+                  {error}
+                </p>
               )}
             </div>
           </motion.div>

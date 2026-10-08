@@ -1,10 +1,12 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import * as authApi from '@/features/client/auth/auth.api';
 import { setAccessToken, setRefreshToken } from '@/client-setup/client';
 import { useAuthContext } from '@/context/authContext';
+import { getFirstName } from '@/lib/greeting';
 import { snooze } from '@/lib/snooze';
 import type { GoogleLoginPayload } from '@/features/client/auth/auth.type';
 
@@ -19,6 +21,10 @@ export const useAuth = () => {
       setAccessToken(response.data.accessToken);
       setRefreshToken(response.data.refreshToken);
       setUser(response.data.user);
+
+      toast.success(`Welcome, ${getFirstName(response.data.user)}!`, {
+        description: "You're now signed in.",
+      });
     },
   });
 

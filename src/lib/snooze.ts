@@ -1,5 +1,5 @@
 const DISMISS_KEY = "synqed_signin_prompt_dismissed_at";
-const SNOOZE_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+const SNOOZE_MS = 1 * 24 * 60 * 60 * 1000; // 3 days
 
 export const isSnoozed = (): boolean => {
   try {

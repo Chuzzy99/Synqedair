@@ -213,7 +213,6 @@ export default function Home() {
   const [originAirport, setOriginAirport]           = useState<Airport | null>(null);
   const [destinationAirport, setDestinationAirport] = useState<Airport | null>(null);
   const [loading, setLoading]                        = useState(false);
-  const [greeting, setGreeting] = useState("Hello");
   const [tripType, setTripType] = useState("One way");
   const [userCountryCode, setUserCountryCode] = useState("US");
   const [userOriginCode, setUserOriginCode] = useState(DEFAULT_CODE);
@@ -257,12 +256,6 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Good morning");
-    else if (hour < 16) setGreeting("Good afternoon");
-    else if (hour < 20) setGreeting("Good evening");
-    else setGreeting("Good day");
-
     // Last known location from localStorage
     const cachedCountry = localStorage.getItem("synqed_country_code");
     const cachedOriginCode = localStorage.getItem("synqed_origin_code");
@@ -329,8 +322,7 @@ export default function Home() {
                 <PlaneTakeoff className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-mono text-xs tracking-widest text-ice uppercase block">{greeting}</span>
-                <h2 className="font-display text-2xl font-semibold mt-1">Where to next?</h2>
+                <h2 className="font-display text-2xl font-semibold">Where to next?</h2>
               </div>
             </motion.div>
 
