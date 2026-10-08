@@ -2,19 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Moon, Sun, Sunrise, Sunset } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 import { useAuth } from "@/features/client/auth/auth.hook";
 import { getFirstName, getGreetingPeriod } from "@/lib/greeting";
 import type { GreetingPeriod } from "@/lib/greeting";
-
-const ICONS: Record<GreetingPeriod, LucideIcon> = {
-  morning: Sunrise,
-  afternoon: Sun,
-  evening: Sunset,
-  night: Moon,
-};
 
 const LABELS: Record<GreetingPeriod, string> = {
   morning: "Good morning",
@@ -28,7 +19,7 @@ interface NavGreetingProps {
 }
 
 export default function NavGreeting({ className = "" }: NavGreetingProps) {
-  const { user } = useAuth();
+  const { user, isInitializing } = useAuth();
   const [period, setPeriod] = useState<GreetingPeriod | null>(null);
 
   // Computed after mount so server and browser HTML always match,
@@ -42,9 +33,9 @@ export default function NavGreeting({ className = "" }: NavGreetingProps) {
     return () => clearInterval(timer);
   }, []);
 
-  if (!user || !period) return null;
-
-  const Icon = ICONS[period];
+  // Wait for the auth check too, so a returning user doesn't see
+  // the name-less greeting flash before their name appears
+  if (!period || (isInitializing && !user)) return null;
 
   return (
     <motion.div
@@ -53,18 +44,16 @@ export default function NavGreeting({ className = "" }: NavGreetingProps) {
       transition={{ duration: 0.35 }}
       className={`flex min-w-0 items-center gap-2.5 border-l border-white/20 pl-3 md:pl-4 ${className}`}
     >
-      {/* <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300/30 via-white/10 to-transparent ring-1 ring-white/25 md:h-10 md:w-10">
-        <span className="absolute inset-0 rounded-full bg-amber-300/20 blur-md" />
-        <Icon className="relative h-[18px] w-[18px] text-amber-200 md:h-5 md:w-5" />
-      </span> */}
-
       <div className="min-w-0 leading-tight">
         <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-[#AEB6CC] md:text-[11px]">
           {LABELS[period]}
         </p>
-        <p className="max-w-[8rem] truncate bg-gradient-to-r from-white via-white to-amber-200 bg-clip-text font-display text-base font-semibold tracking-tight text-transparent sm:max-w-[12rem] md:text-lg">
-          {getFirstName(user)}
-        </p>
+
+        {user && (
+          <p className="max-w-[8rem] truncate bg-gradient-to-r from-white via-white to-amber-200 bg-clip-text font-display text-base font-semibold tracking-tight text-transparent sm:max-w-[12rem] md:text-lg">
+            {getFirstName(user)}
+          </p>
+        )}
       </div>
     </motion.div>
   );
