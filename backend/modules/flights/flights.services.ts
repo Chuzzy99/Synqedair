@@ -20,8 +20,6 @@ const mapPlace = (place: PlaceLike) => ({
   city: place.city_name ?? place.name,
 })
 
-export const SERVICE_FEE_NAME = 'Synqed Air service charge'
-
 const OFFER_UNAVAILABLE_MESSAGE = 'This fare is no longer available. Please search again.'
 
 const CHARGE_FEE_FOR_INFANTS = false
@@ -95,11 +93,6 @@ const mapOffer = (offer: MappableOffer) => {
     taxAmount: pricing.taxAmount,
     totalAmount: pricing.totalAmount,
     totalCurrency: pricing.currency,
-
-    serviceFee: {
-      name: SERVICE_FEE_NAME,
-      amount: pricing.serviceFee,
-    },
 
     expiresAt: offer.expires_at,
     emissionsKg: offer.total_emissions_kg,
