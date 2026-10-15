@@ -10,6 +10,7 @@ import { errorMiddleware } from './middleware/errorMiddleware.js';
 import { AppError } from './utils/appError.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
+import flightsRoutes from "./modules/flights/flights.routes.js"
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/flights', flightsRoutes)
 
 app.use((req, _res, next) => {
   next(new AppError(`Route not found: ${req.originalUrl}`, 404));

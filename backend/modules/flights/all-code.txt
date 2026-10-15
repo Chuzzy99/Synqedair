@@ -1,0 +1,351 @@
+
+
+===== ./flights.contoller.ts =====
+
+import type { Request, Response } from 'express'
+import { asyncHandler } from '../../utils/asyncHandler.js'
+import { sendResponse } from '../../utils/response.js'
+import { searchFlights } from './flights.services.js'
+import type { SearchFlightsInput } from './flights.validation.js'
+
+
+export const searchFlightsController = asyncHandler(async (req: Request, res: Response) => {
+  const result = await searchFlights(req.validatedBody as SearchFlightsInput)
+  sendResponse(res, 200, 'Flights fetched successfully', result)
+})
+
+===== ./flights.routes.ts =====
+
+import { Router } from 'express'
+import { z } from 'zod'
+import { validate } from '../../middleware/validateMiddleware.js'
+import { searchFlightsSchema } from './flights.validation.js'
+import { searchFlightsController } from './flights.contoller.js'
+
+const router = Router()
+
+router.post('/search', validate({ body: searchFlightsSchema }), searchFlightsController)
+
+export default router
+
+===== ./flights.services.ts =====
+
+
+import { duffel } from '../../config/duffel.js'
+import { AppError } from '../../utils/appError.js'
+import { type SearchFlightsInput } from './flights.validation.js'
+
+type Slices = Parameters<typeof duffel.offerRequests.create>[0]['slices']
+
+type PlaceLike = {
+  iata_code: string | null
+  name: string
+  city_name?: string | null
+}
+
+const mapPlace = (place: PlaceLike) => ({
+  code: place.iata_code,
+  name: place.name,
+  city: place.city_name ?? place.name,
+})
+
+/* -------------------------------------------------------------------------- */
+/* Synqed Air service charge                                                  */
+/* -------------------------------------------------------------------------- */
+
+export const SERVICE_FEE_NAME = 'Synqed Air service charge'
+
+// Set to false if you don't want to charge the fee for infants without a seat.
+const CHARGE_FEE_FOR_INFANTS = false
+
+// Service fee per passenger, in minor units (cents/pence).
+const SERVICE_FEE_PER_PASSENGER_MINOR: Record<string, number> = {
+  USD: 2000, // $20.00
+  GBP: 1500, // £15.00
+  EUR: 1750, // €17.50
+}
+
+const isSupportedCurrency = (currency: string) =>
+  SERVICE_FEE_PER_PASSENGER_MINOR[currency] !== undefined
+
+const toMinor = (amount: string | number) =>
+  Math.round(Number(amount) * 100)
+
+const fromMinor = (minor: number) => (minor / 100).toFixed(2)
+
+type PassengerLike = {
+  type?: string | null
+}
+
+export const getServiceFeeMinor = (
+  currency: string,
+  passengers: PassengerLike[],
+) => {
+  const perPassenger = SERVICE_FEE_PER_PASSENGER_MINOR[currency]
+
+  if (perPassenger === undefined) {
+    throw new AppError(
+      `No service fee configured for currency: ${currency}`,
+      500,
+    )
+  }
+
+  const payingPassengers = CHARGE_FEE_FOR_INFANTS
+    ? passengers.length
+    : passengers.filter((p) => p.type !== 'infant_without_seat').length
+
+  return perPassenger * payingPassengers
+}
+
+/**
+ * Calculates the customer-facing price and the original amount owed to Duffel.
+ *
+ * Use this at booking time too, with a freshly fetched offer.
+ * Never trust amounts sent from the client.
+ */
+export const getOfferPricing = (offer: {
+  base_amount: string
+  tax_amount: string | null
+  total_amount: string
+  total_currency: string
+  passengers: PassengerLike[]
+}) => {
+  const feeMinor = getServiceFeeMinor(
+    offer.total_currency,
+    offer.passengers,
+  )
+
+  return {
+    currency: offer.total_currency,
+
+    serviceFee: fromMinor(feeMinor),
+
+    // Airline base + Synqed Air service fee.
+    baseAmount: fromMinor(toMinor(offer.base_amount) + feeMinor),
+
+    // Original airline tax amount.
+    taxAmount: offer.tax_amount,
+
+    // Original airline total + Synqed Air service fee.
+    totalAmount: fromMinor(toMinor(offer.total_amount) + feeMinor),
+
+    // Original airline total. This does not include our service fee.
+    duffelAmount: offer.total_amount,
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Search                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export const searchFlights = async (input: SearchFlightsInput) => {
+  const slices: Slices = [
+    {
+      origin: input.origin,
+      destination: input.destination,
+      departure_date: input.departureDate,
+      departure_time: null,
+      arrival_time: null,
+    },
+  ]
+
+  if (input.returnDate) {
+    slices.push({
+      origin: input.destination,
+      destination: input.origin,
+      departure_date: input.returnDate,
+      departure_time: null,
+      arrival_time: null,
+    })
+  }
+
+  const passengers = [
+    ...Array.from({ length: input.adults }, () => ({
+      type: 'adult' as const,
+    })),
+    ...input.childAges.map((age) => ({ age })),
+    ...Array.from({ length: input.infants }, () => ({ age: 1 })),
+  ]
+
+  try {
+    const { data } = await duffel.offerRequests.create({
+      slices,
+      passengers,
+      cabin_class: input.cabinClass,
+      return_offers: true,
+    })
+
+    const rawOffers = data.offers ?? []
+
+    // Log offers that cannot be priced due to unsupported currencies.
+    const skipped = rawOffers.filter(
+      (offer) => !isSupportedCurrency(offer.total_currency),
+    )
+
+    if (skipped.length) {
+      console.warn(
+        `Skipped ${skipped.length} offers with unsupported currencies:`,
+        [...new Set(skipped.map((offer) => offer.total_currency))],
+      )
+    }
+
+    const allOffers = rawOffers
+      .filter((offer) => isSupportedCurrency(offer.total_currency))
+      .map((offer) => {
+        const pricing = getOfferPricing(offer)
+
+        // DEBUG: Compare the original Duffel price with the customer price.
+        // console.log('✈️ Synqed Air Flight Pricing:', {
+        //   offerId: offer.id,
+        //   currency: offer.total_currency,
+
+        //   // Original prices returned by Duffel.
+        //   airlineBaseAmount: offer.base_amount,
+        //   airlineTaxAmount: offer.tax_amount,
+        //   originalAirlineTotal: offer.total_amount,
+
+        //   // Synqed Air service fee.
+        //   serviceFee: pricing.serviceFee,
+
+        //   // Prices displayed to the customer after adding the fee.
+        //   customerBaseAmount: pricing.baseAmount,
+        //   customerTaxAmount: pricing.taxAmount,
+        //   customerTotalAmount: pricing.totalAmount,
+
+        //   // Original airline total, excluding Synqed Air's fee.
+        //   duffelAmount: pricing.duffelAmount,
+
+        //   // Helps verify the arithmetic.
+        //   feeAddedToBase:
+        //     Number(pricing.baseAmount) - Number(offer.base_amount),
+        //   feeAddedToTotal:
+        //     Number(pricing.totalAmount) - Number(offer.total_amount),
+        // })
+
+        return {
+          id: offer.id,
+          baseAmount: pricing.baseAmount,
+          taxAmount: pricing.taxAmount,
+          totalAmount: pricing.totalAmount,
+          totalCurrency: pricing.currency,
+
+          serviceFee: {
+            name: SERVICE_FEE_NAME,
+            amount: pricing.serviceFee,
+          },
+
+          expiresAt: offer.expires_at,
+          emissionsKg: offer.total_emissions_kg,
+          identityDocumentsRequired:
+            offer.passenger_identity_documents_required,
+
+          payment: {
+            requiresInstantPayment:
+              offer.payment_requirements.requires_instant_payment,
+            paymentRequiredBy:
+              offer.payment_requirements.payment_required_by,
+            priceGuaranteeExpiresAt:
+              offer.payment_requirements.price_guarantee_expires_at,
+          },
+
+          conditions: {
+            changeBeforeDeparture:
+              offer.conditions?.change_before_departure ?? null,
+            refundBeforeDeparture:
+              offer.conditions?.refund_before_departure ?? null,
+          },
+
+          airline: {
+            name: offer.owner.name,
+            iataCode: offer.owner.iata_code,
+            logo: offer.owner.logo_symbol_url,
+          },
+
+          passengers: offer.passengers.map((p) => ({
+            id: p.id,
+            type: p.type,
+          })),
+
+          slices: offer.slices.map((slice) => ({
+            id: slice.id,
+            origin: mapPlace(slice.origin),
+            destination: mapPlace(slice.destination),
+            duration: slice.duration,
+            stops: slice.segments.length - 1,
+            fareBrandName: slice.fare_brand_name,
+
+            segments: slice.segments.map((seg) => ({
+              id: seg.id,
+
+              origin: {
+                ...mapPlace(seg.origin),
+                terminal: seg.origin_terminal,
+              },
+
+              destination: {
+                ...mapPlace(seg.destination),
+                terminal: seg.destination_terminal,
+              },
+
+              departingAt: seg.departing_at,
+              arrivingAt: seg.arriving_at,
+              duration: seg.duration,
+
+              carrier: {
+                name: seg.marketing_carrier.name,
+                iataCode: seg.marketing_carrier.iata_code,
+                logo: seg.marketing_carrier.logo_symbol_url,
+              },
+
+              operatingCarrier: seg.operating_carrier.name,
+
+              flightNumber: `${seg.marketing_carrier.iata_code}${seg.marketing_carrier_flight_number}`,
+
+              aircraft: seg.aircraft?.name ?? null,
+
+              cabinClass:
+                seg.passengers[0]?.cabin_class_marketing_name ?? null,
+
+              baggages: seg.passengers[0]?.baggages ?? [],
+            })),
+          })),
+        }
+      })
+      .sort(
+        (a, b) => Number(a.totalAmount) - Number(b.totalAmount),
+      )
+
+    return {
+      offerRequestId: data.id,
+      count: allOffers.length,
+      offers: allOffers.slice(0, 50),
+    }
+  } catch (error: any) {
+    if (error instanceof AppError) throw error
+
+    const message = error?.errors?.[0]?.message || 'Flight search failed'
+
+    throw new AppError(message, error?.meta?.status || 502)
+  }
+}
+
+===== ./flights.validation.ts =====
+
+import { z } from 'zod'
+
+const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+
+export const searchFlightsSchema = z.object({
+  origin: z.string().length(3).transform((v) => v.toUpperCase()),
+  destination: z.string().length(3).transform((v) => v.toUpperCase()),
+  departureDate: z.string().regex(dateRegex),
+  returnDate: z.string().regex(dateRegex).optional(),
+  adults: z.number().int().min(1).max(9).default(1),
+  childAges: z.array(z.number().int().min(2).max(17)).max(8).default([]),
+  infants: z.number().int().min(0).max(4).default(0),
+  cabinClass: z.enum(['economy', 'premium_economy', 'business', 'first']).default('economy'),
+})
+  .refine((v) => v.infants <= v.adults, { message: 'Each infant needs an adult', path: ['infants'] })
+  .refine((v) => !v.returnDate || v.returnDate >= v.departureDate, { message: 'Return date cannot be before departure', path: ['returnDate'] })
+
+export type SearchFlightsInput = z.infer<typeof searchFlightsSchema>
