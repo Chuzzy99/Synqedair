@@ -64,11 +64,6 @@ export interface FlightOffer {
   totalAmount: string;
   totalCurrency: string;
 
-  serviceFee: {
-    name: string;
-    amount: string;
-  };
-
   expiresAt: string;
   emissionsKg: string | null;
   identityDocumentsRequired: boolean;

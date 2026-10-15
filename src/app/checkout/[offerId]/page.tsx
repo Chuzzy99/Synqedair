@@ -199,7 +199,6 @@ export default function CheckoutPage() {
 
   const money = (amount: string | number) => formatMoney(amount, offer.totalCurrency);
 
-  const airlineFare = Number(offer.baseAmount) - Number(offer.serviceFee.amount);
   const ancillariesPrice = ancillariesPayload?.services
     ? ancillariesPayload.services.reduce((acc: number, s: any) => acc + parseFloat(s.total_amount), 0)
     : 0;
@@ -346,18 +345,13 @@ export default function CheckoutPage() {
             )}
 
             <div className="flex justify-between items-center py-3 border-b border-line">
-              <span className="text-mist">Airline fare</span>
-              <span className="font-semibold">{money(airlineFare)}</span>
+              <span className="text-mist">Fare</span>
+              <span className="font-semibold">{money(offer.baseAmount)}</span>
             </div>
 
             <div className="flex justify-between items-center py-3 border-b border-line">
               <span className="text-mist">Taxes</span>
               <span className="font-semibold">{offer.taxAmount ? money(offer.taxAmount) : "Included"}</span>
-            </div>
-
-            <div className="flex justify-between items-center py-3 border-b border-line">
-              <span className="text-mist">{offer.serviceFee.name}</span>
-              <span className="font-semibold">{money(offer.serviceFee.amount)}</span>
             </div>
 
             {ancillariesPrice > 0 && (

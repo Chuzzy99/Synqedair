@@ -132,9 +132,6 @@ export default function FlightOfferCard({ offer }: { offer: FlightOffer }) {
 
   const money = (amount: string | number) => formatMoney(amount, offer.totalCurrency);
 
-  // The backend adds our service fee into baseAmount, so subtract it to show the airline fare on its own
-  const airlineFare = Number(offer.baseAmount) - Number(offer.serviceFee.amount);
-
   return (
     <motion.button
       whileHover={{ y: -6 }}
@@ -169,23 +166,17 @@ export default function FlightOfferCard({ offer }: { offer: FlightOffer }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-dashed border-line">
+      <div className="grid grid-cols-2 gap-2 mt-5 pt-4 border-t border-dashed border-line">
         <div className="text-[10px] md:text-[11px] text-mist text-left">
           Fare
           <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">
-            {money(airlineFare)}
-          </b>
-        </div>
-        <div className="text-[10px] md:text-[11px] text-mist text-center">
-          Taxes
-          <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">
-            {offer.taxAmount ? money(offer.taxAmount) : "Included"}
+            {money(offer.baseAmount)}
           </b>
         </div>
         <div className="text-[10px] md:text-[11px] text-mist text-right">
-          {offer.serviceFee.name}
+          Taxes
           <b className="block text-ink text-xs md:text-sm font-semibold mt-0.5">
-            {money(offer.serviceFee.amount)}
+            {offer.taxAmount ? money(offer.taxAmount) : "Included"}
           </b>
         </div>
       </div>
