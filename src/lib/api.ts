@@ -1,8 +1,6 @@
 import {
   AdvisorParseRequest,
   AdvisorParseResponse,
-  FlightSearchRequest,
-  FlightSearchResponse,
   BookingRequest,
   BookingResponse,
 } from "@/types";
@@ -29,26 +27,6 @@ export async function parseAdvisorQuery(
     clarifyingQuestion:
       "Which cities are you flying between? For example: 'Lagos to London'.",
   };
-}
-
-export async function searchFlights(
-  req: FlightSearchRequest
-): Promise<FlightSearchResponse> {
-  const params = new URLSearchParams();
-  if (req.origin)      params.set("origin",      req.origin);
-  if (req.destination) params.set("destination", req.destination);
-  if (req.departDate)  params.set("departDate",  req.departDate);
-  if (req.returnDate)  params.set("returnDate",  req.returnDate);
-  if (req.adults !== undefined)    params.set("adults",  String(req.adults));
-  if (req.children !== undefined)  params.set("children",String(req.children));
-  if (req.cabinClass)  params.set("cabinClass", req.cabinClass);
-
-  const res = await fetch(`${API_BASE}/flights/search?${params.toString()}`);
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(`Flight search failed (${res.status}): ${detail}`);
-  }
-  return res.json();
 }
 
 export async function getOffer(offerId: string) {

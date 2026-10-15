@@ -10,7 +10,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@duffel/api": "^4.28.0",
+    "@duffel/api": "^4.31.0",
     "@duffel/components": "^3.17.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "@fontsource/space-grotesk": "^5.3.0",

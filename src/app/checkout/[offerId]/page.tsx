@@ -1,200 +1,248 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DuffelAncillaries } from "@duffel/components";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, AlertCircle, PlaneTakeoff, Clock } from "lucide-react";
 import Nav from "@/components/Nav";
+import PassengerForm from "@/components/PassengerForm";
 import { getStoredLocation, getUserLocation, getPaystackCurrency } from "@/lib/currency";
+import { useFlightOffer } from "@/features/client/flights/flights.hook";
+import { formatDuration, formatMoney, getSliceMinutes } from "@/features/client/flights/flights.utils";
+import type { FlightSlice } from "@/features/client/flights/flights.type";
+import {
+  getTravelDates,
+  validateCheckoutForm,
+  type ContactFormValues,
+  type PassengerFormValues,
+} from "@/features/client/flights/passengers.validation";
+import { createInitialPassengers, toBookingPassengers } from "@/features/client/flights/passengers.utils";
+
+const timeOf = (iso: string) => iso.slice(11, 16);
+
+const formatDay = (iso: string) =>
+  new Date(`${iso.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+
+const formatCountdown = (seconds: number) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+};
+
+function SliceSummary({ slice, label }: { slice: FlightSlice; label?: string }) {
+  const first = slice.segments[0];
+  const last = slice.segments[slice.segments.length - 1];
+  if (!first || !last) return null;
+
+  const minutes = getSliceMinutes(slice);
+  const flightNumbers = slice.segments.map((seg) => seg.flightNumber).join(" · ");
+  const layovers = slice.segments.slice(0, -1).map((seg) => seg.destination.code ?? seg.destination.name);
+  const stopsText = slice.stops === 0 ? "Direct" : `${slice.stops} stop${slice.stops > 1 ? "s" : ""} · ${layovers.join(", ")}`;
+
+  return (
+    <div className="py-4 border-b border-line last:border-b-0">
+      <div className="text-[11px] text-mist font-semibold uppercase tracking-wider mb-2">
+        {label ? `${label} · ` : ""}{formatDay(first.departingAt)} · {flightNumbers}
+      </div>
+      <div className="flex items-center gap-3">
+        <div>
+          <div className="font-semibold text-ink">{timeOf(first.departingAt)}</div>
+          <div className="font-mono text-[11px] text-mist">{first.origin.code ?? first.origin.city}</div>
+        </div>
+        <div className="flex-1">
+          <div className="text-[11px] text-mist text-center mb-1">
+            {stopsText}{minutes ? ` · ${formatDuration(minutes)}` : ""}
+          </div>
+          <div className="h-px bg-line" />
+        </div>
+        <div className="text-right">
+          <div className="font-semibold text-ink">{timeOf(last.arrivingAt)}</div>
+          <div className="font-mono text-[11px] text-mist">{last.destination.code ?? last.destination.city}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CheckoutPage() {
   const params = useParams();
   const router = useRouter();
-  const offerId = params.offerId as string;
+  const offerId = (params.offerId as string | undefined) ?? null;
 
-  const [offer, setOffer] = useState<any>(null);
+  const { offer, isLoading, isError, isExpired, errorMessage, refetch } = useFlightOffer(offerId);
+
   const [clientKey, setClientKey] = useState<string | null>(null);
   const [localCurrency, setLocalCurrency] = useState<string>("USD");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
 
-  // Form State
-  const [passengersData, setPassengersData] = useState<any[]>([]);
-  const [email, setEmail] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [contact, setContact] = useState<ContactFormValues>({ email: "", phone: "" });
+  const [passengers, setPassengers] = useState<PassengerFormValues[]>([]);
+  const [showErrors, setShowErrors] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   const [ancillariesPayload, setAncillariesPayload] = useState<any>(null);
 
+  const expiresAt = offer?.expiresAt ?? null;
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const refetchedFor = useRef<string | null>(null);
+
   useEffect(() => {
-    async function init() {
+    if (!offerId) return;
+
+    const loadClientKey = async () => {
       try {
-        // Fetch Offer
-        const offerRes = await fetch(`/api/flights/offer?id=${offerId}`);
-        if (!offerRes.ok) {
-          throw new Error(`Offer fetch failed: ${offerRes.status}`);
-        }
-        const offerData = await offerRes.json();
-        if (offerData.error) throw new Error("Offer failed");
-        setOffer(offerData);
-
-        // Fetch Client Key
-        try {
-          const keyRes = await fetch("/api/client-key", { method: "POST", body: JSON.stringify({ offerId }) });
-          if (keyRes.ok) {
-            const keyData = await keyRes.json();
-            if (keyData.client_key) {
-              setClientKey(keyData.client_key);
-            } else {
-              setClientKey("");
-            }
-          } else {
-            setClientKey("");
-          }
-        } catch (keyError) {
-          console.error("Client key fetch failed:", keyError);
-          setClientKey("");
-        }
-        
-        // Fetch User Currency
-        try {
-          const stored = getStoredLocation();
-          if (stored) {
-            setLocalCurrency(stored.currency);
-          } else {
-            const location = await getUserLocation();
-            setLocalCurrency(location.currency);
-          }
-        } catch (currencyError) {
-          console.error("Currency fetch failed:", currencyError);
-        }
-
-        // Initialize passenger form state
-        if (offerData.passengers) {
-          setPassengersData(
-            offerData.passengers.map((p: any) => ({
-              id: p.id,
-              type: p.type,
-              title: "mr",
-              first_name: "",
-              last_name: "",
-              born_on: "",
-              gender: "m",
-            }))
-          );
-        }
-      } catch (e) {
-        console.error("Checkout init failed:", e);
-        setError(true);
-      } finally {
-        setLoading(false);
+        const keyRes = await fetch("/api/client-key", { method: "POST", body: JSON.stringify({ offerId }) });
+        if (!keyRes.ok) return setClientKey("");
+        const keyData = await keyRes.json();
+        setClientKey(keyData.client_key || "");
+      } catch (keyError) {
+        console.error("Client key fetch failed:", keyError);
+        setClientKey("");
       }
-    }
-    init();
+    };
+
+    loadClientKey();
   }, [offerId]);
 
-  const updatePassenger = (index: number, field: string, value: string) => {
-    const newData = [...passengersData];
-    newData[index] = { ...newData[index], [field]: value };
-    setPassengersData(newData);
+  useEffect(() => {
+    const loadCurrency = async () => {
+      try {
+        const stored = getStoredLocation();
+        if (stored) return setLocalCurrency(stored.currency);
+        const location = await getUserLocation();
+        setLocalCurrency(location.currency);
+      } catch (currencyError) {
+        console.error("Currency fetch failed:", currencyError);
+      }
+    };
+
+    loadCurrency();
+  }, []);
+
+  const loadedOfferId = offer?.id;
+
+  useEffect(() => {
+    if (!offer) return;
+    setPassengers(createInitialPassengers(offer));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedOfferId]);
+
+  useEffect(() => {
+    if (!expiresAt) return;
+
+    const tick = () => setSecondsLeft(Math.max(0, Math.floor((Date.parse(expiresAt) - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+
+    return () => clearInterval(timer);
+  }, [expiresAt]);
+
+  useEffect(() => {
+    if (secondsLeft !== 0 || !expiresAt || refetchedFor.current === expiresAt) return;
+    refetchedFor.current = expiresAt;
+    refetch();
+  }, [secondsLeft, expiresAt, refetch]);
+
+  const errors = useMemo(
+    () => (offer ? validateCheckoutForm(contact, passengers, offer) : {}),
+    [contact, passengers, offer]
+  );
+
+  const updatePassenger = (index: number, patch: Partial<PassengerFormValues>) => {
+    setPassengers((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
   };
 
-  if (loading) {
+  if (isLoading || (!offer && !isError)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-offwhite">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-offwhite">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo mb-4" />
+        <p className="text-mist font-medium">Checking this fare is still available…</p>
       </div>
     );
   }
 
-  if (error || !offer) {
+  if (isError || !offer) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-offwhite flex-col">
-        <h1 className="text-2xl font-bold text-ink mb-4">Failed to load offer</h1>
-        <button onClick={() => router.back()} className="text-indigo underline">Go back</button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-offwhite text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-5">
+          {isExpired ? <PlaneTakeoff className="w-8 h-8 text-red-400" /> : <AlertCircle className="w-8 h-8 text-red-400" />}
+        </div>
+        <h1 className="text-2xl font-bold text-ink mb-2">
+          {isExpired ? "This fare is no longer available" : "We couldn't load this fare"}
+        </h1>
+        <p className="text-mist text-sm max-w-sm mb-6 leading-relaxed">
+          {isExpired ? "Prices and seats change quickly. Go back to your results or search again to see current fares." : errorMessage}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {!isExpired && (
+            <button
+              onClick={() => refetch()}
+              className="bg-[#0A1128] text-white font-semibold text-sm py-3 px-5 rounded-xl hover:bg-[#16224A] transition-colors"
+            >
+              Try again
+            </button>
+          )}
+          <button
+            onClick={() => router.back()}
+            className="inline-flex items-center justify-center gap-2 bg-[#E8FBFF] text-[#1C9BB8] font-semibold text-sm py-3 px-5 rounded-xl hover:bg-[#D0F4FD] transition-colors border border-[#C9F1FC]"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to results
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Calculate prices
-  const duffelBasePrice = parseFloat(offer.total_amount);
-  const bookingFee = 20; // $20 USD booking fee (truly bundled into fare)
-  const basePrice = duffelBasePrice + bookingFee; // Fare includes booking fee
+  const money = (amount: string | number) => formatMoney(amount, offer.totalCurrency);
+
+  const airlineFare = Number(offer.baseAmount) - Number(offer.serviceFee.amount);
   const ancillariesPrice = ancillariesPayload?.services
     ? ancillariesPayload.services.reduce((acc: number, s: any) => acc + parseFloat(s.total_amount), 0)
     : 0;
-  const totalPrice = basePrice + ancillariesPrice; // Total matches the bundled fare
-
-
-
-
-  const handlePaystackSuccessAction = async (reference: any) => {
-    try {
-      // 1. Submit order to our backend
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          offerId: offer.id,
-          passengers: passengersData.map((p) => ({
-            ...p,
-            phone_number: phoneNumber,
-            email: email,
-          })),
-          services: ancillariesPayload?.services || [],
-          payments: [
-            {
-              type: "balance",
-              currency: offer.total_currency,
-              amount: offer.total_amount, // The Duffel booking uses balance for the base + services amount
-            }
-          ],
-          paystackRef: reference.reference,
-          totalAmount: totalPrice,
-          currency: offer.total_currency,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        alert("Booking successful! Ref: " + data.orderId);
-        // router.push(`/success/${data.orderId}`);
-      } else {
-        alert("Booking failed on our end. Please contact support.");
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Error confirming booking.");
-    }
-  };
+  const totalPrice = Number(offer.totalAmount) + ancillariesPrice;
+  const isRoundTrip = offer.slices.length > 1;
+  const travelers = offer.passengers.length;
+  const dates = getTravelDates(offer);
+  const formReady = passengers.length === offer.passengers.length;
+  const fareClosed = secondsLeft === 0;
+  const fareRunningOut = secondsLeft !== null && secondsLeft > 0 && secondsLeft <= 180;
 
   const handlePaymentInit = async () => {
+    setPayError(null);
+
+    if (Object.keys(errors).length > 0) {
+      setShowErrors(true);
+      setTimeout(() => {
+        document.querySelector('[data-error="true"]')?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 50);
+      return;
+    }
+
+    setIsPaying(true);
+
     try {
-      const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
       const callbackUrl = `${window.location.origin}/success`;
-
-      // Use ancillaries if available, otherwise empty array
       const services = ancillariesPayload?.services || [];
-      
       const chargeCurrency = getPaystackCurrency(localCurrency);
+      const bookingPassengers = toBookingPassengers(passengers, contact, offer.identityDocumentsRequired);
 
-      // Payment uses the total which includes the bundled booking fee
       const res = await fetch("/api/bookings/init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           offerId: offer.id,
-          passengerName: passengersData[0]?.first_name + " " + passengersData[0]?.last_name,
-          passengerEmail: email,
-          passengerPhone: phoneNumber,
+          passengerName: `${bookingPassengers[0].first_name} ${bookingPassengers[0].last_name}`,
+          passengerEmail: bookingPassengers[0].email,
+          passengerPhone: bookingPassengers[0].phone_number,
           amount: totalPrice,
-          currency: offer.total_currency,
-          chargeCurrency: chargeCurrency,
+          currency: offer.totalCurrency,
+          chargeCurrency,
           callbackUrl,
-          passengers: passengersData.map((p) => ({
-            ...p,
-            phone_number: phoneNumber,
-            email: email,
-          })),
+          passengers: bookingPassengers,
           services,
         }),
       });
@@ -202,23 +250,18 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (data.paymentAuthorizationUrl) {
-        // Redirect to Paystack payment page
         window.location.href = data.paymentAuthorizationUrl;
-      } else {
-        alert("Failed to initialize payment\n" + (data.paystackError || data.error || "Unknown error"));
+        return;
       }
+
+      setPayError(data.paystackError || data.error || "We could not start your payment. Please try again.");
     } catch (e) {
       console.error(e);
-      alert("Error initializing payment");
+      setPayError("Something went wrong starting your payment. Please try again.");
     }
-  };
 
-  const handlePaystackCloseAction = () => {
-    console.log("Payment closed.");
+    setIsPaying(false);
   };
-
-  // Determine if form is fully filled out
-  const isFormValid = email && phoneNumber && passengersData.every(p => p.first_name && p.last_name && p.born_on);
 
   return (
     <div className="bg-[#f7f9fb] min-h-screen text-ink pb-12">
@@ -233,86 +276,50 @@ export default function CheckoutPage() {
       </div>
 
       <div className="mx-auto max-w-5xl px-6 md:px-10 mt-8 flex flex-col lg:flex-row gap-8">
-        
-        {/* Left Column (Forms & Ancillaries) */}
         <div className="flex-1 space-y-8">
-          
-          {/* Passengers Form */}
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-line">
-            <h2 className="text-xl font-bold mb-6">Passenger Details</h2>
-            
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-2">Contact Email</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} 
-                    className="w-full bg-offwhite border border-line rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo transition-all"
-                    placeholder="you@example.com" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-2">Phone Number</label>
-                  <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} 
-                    className="w-full bg-offwhite border border-line rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo transition-all"
-                    placeholder="+1 234 567 8900" />
-                </div>
-              </div>
-              
-              <div className="h-px bg-line w-full my-6"></div>
-
-              {passengersData.map((p, idx) => (
-                <div key={p.id} className="space-y-4">
-                  <h3 className="font-semibold text-indigo">Passenger {idx + 1} ({p.type})</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-2">Title</label>
-                      <select value={p.title} onChange={(e) => updatePassenger(idx, "title", e.target.value)}
-                        className="w-full bg-offwhite border border-line rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo transition-all">
-                        <option value="mr">Mr</option>
-                        <option value="mrs">Mrs</option>
-                        <option value="ms">Ms</option>
-                        <option value="miss">Miss</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-2">First Name</label>
-                      <input type="text" value={p.first_name} onChange={(e) => updatePassenger(idx, "first_name", e.target.value)}
-                        className="w-full bg-offwhite border border-line rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo transition-all" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-2">Last Name</label>
-                      <input type="text" value={p.last_name} onChange={(e) => updatePassenger(idx, "last_name", e.target.value)}
-                        className="w-full bg-offwhite border border-line rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo transition-all" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-2">Date of Birth</label>
-                      <input type="date" value={p.born_on} onChange={(e) => updatePassenger(idx, "born_on", e.target.value)}
-                        className="w-full bg-offwhite border border-line rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo transition-all" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-mist uppercase tracking-wider mb-2">Gender</label>
-                      <select value={p.gender} onChange={(e) => updatePassenger(idx, "gender", e.target.value)}
-                        className="w-full bg-offwhite border border-line rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo transition-all">
-                        <option value="m">Male</option>
-                        <option value="f">Female</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
+            <div className="flex items-center gap-2 mb-2">
+              {offer.airline.logo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={offer.airline.logo} alt="" className="w-6 h-6 object-contain" />
+              )}
+              <h2 className="text-xl font-bold">
+                {offer.slices[0]?.origin.city} → {offer.slices[0]?.destination.city}
+              </h2>
+            </div>
+            <p className="text-xs text-mist mb-2">
+              {offer.airline.name}{isRoundTrip ? " · Round trip" : " · One way"} · {travelers} traveler{travelers > 1 ? "s" : ""}
+            </p>
+            <div>
+              {offer.slices.map((slice, index) => (
+                <SliceSummary
+                  key={slice.id}
+                  slice={slice}
+                  label={isRoundTrip ? (index === 0 ? "Outbound" : "Return") : undefined}
+                />
               ))}
             </div>
           </div>
 
-          {/* Duffel Ancillaries (Seats, Bags) */}
+          <PassengerForm
+            contact={contact}
+            onContactChange={(patch) => setContact((prev) => ({ ...prev, ...patch }))}
+            passengers={passengers}
+            onPassengerChange={updatePassenger}
+            identityRequired={offer.identityDocumentsRequired}
+            dates={dates}
+            errors={errors}
+            showAll={showErrors}
+          />
+
           {clientKey && (
             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-line">
               <h2 className="text-xl font-bold mb-6">Customize Your Trip</h2>
               <div className="min-h-[300px]">
                 <DuffelAncillaries
                   offer_id={offer.id}
-                  services={offer.available_services || []}
-                  passengers={offer.passengers}
+                  services={offer.availableServices as any}
+                  passengers={offer.passengers as any}
                   client_key={clientKey}
                   onPayloadReady={(payload: any) => {
                     setAncillariesPayload(payload);
@@ -323,40 +330,65 @@ export default function CheckoutPage() {
           )}
         </div>
 
-        {/* Right Column (Summary & Payment) */}
         <div className="lg:w-[380px]">
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-line sticky top-6">
             <h2 className="text-lg font-bold mb-4">Summary</h2>
-            
+
+            {secondsLeft !== null && (
+              <div
+                className={`flex items-center gap-2 text-xs font-semibold rounded-xl px-3 py-2 mb-4 ${
+                  fareRunningOut || fareClosed ? "bg-amber-50 text-amber-700" : "bg-[#E8FBFF] text-[#1C9BB8]"
+                }`}
+              >
+                <Clock className="w-4 h-4 shrink-0" />
+                {fareClosed ? "Confirming this fare is still available…" : `This fare is held for ${formatCountdown(secondsLeft)}`}
+              </div>
+            )}
+
             <div className="flex justify-between items-center py-3 border-b border-line">
-              <span className="text-mist">Flight Fare</span>
-              <span className="font-semibold">{offer.total_currency} {basePrice.toFixed(2)}</span>
+              <span className="text-mist">Airline fare</span>
+              <span className="font-semibold">{money(airlineFare)}</span>
+            </div>
+
+            <div className="flex justify-between items-center py-3 border-b border-line">
+              <span className="text-mist">Taxes</span>
+              <span className="font-semibold">{offer.taxAmount ? money(offer.taxAmount) : "Included"}</span>
+            </div>
+
+            <div className="flex justify-between items-center py-3 border-b border-line">
+              <span className="text-mist">{offer.serviceFee.name}</span>
+              <span className="font-semibold">{money(offer.serviceFee.amount)}</span>
             </div>
 
             {ancillariesPrice > 0 && (
               <div className="flex justify-between items-center py-3 border-b border-line">
                 <span className="text-mist">Extras (Seats/Bags)</span>
-                <span className="font-semibold">{offer.total_currency} {ancillariesPrice.toFixed(2)}</span>
+                <span className="font-semibold">{money(ancillariesPrice)}</span>
               </div>
             )}
 
             <div className="flex justify-between items-center py-5 text-xl font-bold">
               <span>Total</span>
-              <span className="text-indigo">{offer.total_currency} {totalPrice.toFixed(2)}</span>
+              <span className="text-indigo">{money(totalPrice)}</span>
             </div>
 
-            {!isFormValid && (
-              <p className="text-xs text-red-500 mb-4 text-center bg-red-50 p-2 rounded-xl">Please fill out all passenger details before paying.</p>
+            {showErrors && Object.keys(errors).length > 0 && (
+              <p className="text-xs text-red-500 mb-4 text-center bg-red-50 p-2 rounded-xl">
+                Please fix the highlighted fields before paying.
+              </p>
             )}
+
+            {payError && <p className="text-xs text-red-500 mb-4 text-center bg-red-50 p-2 rounded-xl">{payError}</p>}
 
             <button
               onClick={handlePaymentInit}
-              disabled={!isFormValid}
-              className="w-full rounded-2xl bg-indigo text-white font-semibold text-lg py-4 hover:bg-indigo2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isPaying || fareClosed || !formReady}
+              className="w-full rounded-2xl bg-indigo text-white font-semibold text-lg py-4 hover:bg-indigo2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
             >
-              Pay Now
+              {isPaying && <Loader2 className="w-5 h-5 animate-spin" />}
+              {isPaying ? "Redirecting to payment…" : "Pay Now"}
             </button>
-            
+
             <p className="text-[10px] text-mist text-center mt-4">Payments processed securely by Paystack. All prices include taxes and fees.</p>
           </div>
         </div>
