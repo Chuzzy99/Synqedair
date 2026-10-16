@@ -24,6 +24,7 @@ model User {
   updatedAt     DateTime     @updatedAt
 
   refreshTokens RefreshToken[]
+    bookings      Booking[]
 
   @@map("users")
 }
@@ -38,4 +39,78 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  PAID
+  BOOKED
+  FAILED
+  EXPIRED
+  REFUND_REQUIRED
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  STRIPE
+}
+
+model Booking {
+  id        String @id @default(uuid())
+
+  // Public, human-friendly reference the customer keeps, e.g. SQ-7K3M9PXA
+  reference String @unique
+
+  // Guest bookings have no user. Linked later when a user logs in with the same email
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  status        BookingStatus @default(PENDING_PAYMENT)
+  failureReason String?
+
+  // Contact and lookup fields. Email is lowercased, leadLastName is the normalised matching key
+  contactEmail String
+  contactPhone String
+  leadLastName String
+
+  // The Duffel offer this booking is for, and when that fare stops being valid
+  offerId        String
+  offerExpiresAt DateTime
+
+  // All money below is stored in minor units (cents, kobo) to avoid float errors.
+  // currency = the offer's currency
+  currency           String
+  airlineAmountMinor Int // what Duffel charges us for the ticket
+  serviceFeeMinor    Int // our margin, never shown to the customer
+  extrasMinor        Int @default(0) // seats and bags, at Duffel's price
+  totalMinor         Int // what the customer pays, in the offer's currency
+
+  // How the customer pays, and what they are actually charged
+  paymentProvider   PaymentProvider
+  chargeCurrency    String // Stripe: same as currency. Paystack: NGN
+  chargeAmountMinor BigInt
+  exchangeRate      Decimal? @db.Decimal(18, 8) // only set for Paystack (offer currency to NGN)
+
+  // Paystack reference, or Stripe Checkout Session id. Unique per attempt
+  providerReference String?   @unique
+  // Stripe PaymentIntent id or Paystack transaction id. Needed later for refunds
+  providerPaymentId String?
+  paidAt            DateTime?
+
+  // Duffel, filled in after the order is created
+  duffelOrderId           String?   @unique
+  airlineBookingReference String? // the airline's own PNR
+  bookedAt                DateTime?
+
+  // Submitted traveler details and selected extras (snapshot at payment init)
+  passengers Json
+  services   Json @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contactEmail, leadLastName])
+  @@index([userId])
+  @@index([status, createdAt])
+  @@map("bookings")
 }

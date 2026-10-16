@@ -15,16 +15,23 @@ const envSchema = z.object({
 
   GOOGLE_CLIENT_ID: z.string().min(1, 'GOOGLE_CLIENT_ID is required'),
 
+  // One or more origins, comma separated. The first one is also used as the payment return URL
   CLIENT_URL: z
-  .string()
-  .min(1, 'CLIENT_URL is required')
-  .transform((value) =>
-    value
-      .split(',')
-      .map((url) => url.trim().replace(/\/$/, ''))
-      .filter(Boolean),
-  )
-  .pipe(z.array(z.string().url()).min(1)),
+    .string()
+    .min(1, 'CLIENT_URL is required')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((url) => url.trim().replace(/\/$/, ''))
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.string().url()).min(1)),
+
+  // Payments
+  PAYSTACK_SECRET_KEY: z.string().min(1, 'PAYSTACK_SECRET_KEY is required'),
+  EXCHANGE_RATE_API_KEY: z.string().min(1, 'EXCHANGE_RATE_API_KEY is required'),
+  FX_MARGIN_PERCENT: z.coerce.number().min(0).max(20).default(2),
+  FX_CACHE_MINUTES: z.coerce.number().positive().default(60),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -1,0 +1,133 @@
+import { AppError } from '../../../utils/appError.js'
+import { env } from '../../../config/env.js'
+
+const PAYSTACK_TIMEOUT_MS = 15000
+
+type InitializeInput = {
+  email: string
+  amountMinor: bigint
+  reference: string
+  callbackUrl: string
+  metadata: Record<string, string>
+}
+
+type InitializeResponse = {
+  status?: boolean
+  message?: string
+  data?: { authorization_url?: string; reference?: string }
+}
+import { createHmac, timingSafeEqual } from 'node:crypto'
+
+export const initializePaystackTransaction = async (input: InitializeInput) => {
+    const secret = env.PAYSTACK_SECRET_KEY
+  const amount = Number(input.amountMinor)
+
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new AppError('Invalid payment amount', 500)
+  }
+
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), PAYSTACK_TIMEOUT_MS)
+
+  let response: Response
+
+  try {
+    response = await fetch('https://api.paystack.co/transaction/initialize', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: input.email,
+        amount,
+        currency: 'NGN',
+        reference: input.reference,
+        callback_url: input.callbackUrl,
+        metadata: input.metadata,
+      }),
+      signal: controller.signal,
+    })
+  } catch {
+    throw new AppError('We could not reach the payment provider. Please try again.', 502)
+  } finally {
+    clearTimeout(timer)
+  }
+
+  const body = (await response.json().catch(() => null)) as InitializeResponse | null
+
+  if (!response.ok || !body?.status || !body.data?.authorization_url) {
+    console.error('Paystack initialize failed:', response.status, body?.message)
+    throw new AppError('We could not start your payment. Please try again.', 502)
+  }
+
+  return {
+    authorizationUrl: body.data.authorization_url,
+    reference: body.data.reference ?? input.reference,
+  }
+}
+export const verifyPaystackSignature = (rawBody: Buffer, signature: string | undefined) => {
+  if (!signature) return false
+
+  const expected = createHmac('sha512', env.PAYSTACK_SECRET_KEY).update(rawBody).digest('hex')
+
+  const a = Buffer.from(expected, 'utf8')
+  const b = Buffer.from(signature, 'utf8')
+
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+type VerifyResponse = {
+  status?: boolean
+  data?: {
+    id?: number
+    status?: string
+    amount?: number
+    currency?: string
+    reference?: string
+  }
+}
+
+// Asks Paystack directly what happened to a transaction. Returns null when Paystack doesn't know it
+export const verifyPaystackTransaction = async (reference: string) => {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), PAYSTACK_TIMEOUT_MS)
+
+  let response: Response
+
+  try {
+    response = await fetch(
+      `https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`,
+      {
+        headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}` },
+        signal: controller.signal,
+      },
+    )
+  } catch {
+    throw new AppError('Could not reach the payment provider', 502)
+  } finally {
+    clearTimeout(timer)
+  }
+
+  if (response.status >= 400 && response.status < 500) return null
+
+  const body = (await response.json().catch(() => null)) as VerifyResponse | null
+  const data = body?.data
+
+  if (
+    !response.ok ||
+    !body?.status ||
+    typeof data?.amount !== 'number' ||
+    typeof data.currency !== 'string' ||
+    data.id === undefined
+  ) {
+    throw new AppError('Could not verify the payment', 502)
+  }
+
+  return {
+    status: data.status ?? 'unknown',
+    amountMinor: BigInt(data.amount),
+    currency: data.currency,
+    providerPaymentId: String(data.id),
+  }
+}

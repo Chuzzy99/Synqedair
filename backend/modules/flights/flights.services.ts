@@ -4,7 +4,7 @@ import { type SearchFlightsInput } from './flights.validation.js'
 
 type Slices = Parameters<typeof duffel.offerRequests.create>[0]['slices']
 
-type DuffelOffer = Awaited<ReturnType<typeof duffel.offers.get>>['data']
+export type DuffelOffer = Awaited<ReturnType<typeof duffel.offers.get>>['data']
 
 type MappableOffer = Omit<DuffelOffer, 'available_services'>
 
@@ -33,10 +33,10 @@ const SERVICE_FEE_PER_PASSENGER_MINOR: Record<string, number> = {
 const isSupportedCurrency = (currency: string) =>
   SERVICE_FEE_PER_PASSENGER_MINOR[currency] !== undefined
 
-const toMinor = (amount: string | number) =>
+export const toMinor = (amount: string | number) =>
   Math.round(Number(amount) * 100)
 
-const fromMinor = (minor: number) => (minor / 100).toFixed(2)
+export const fromMinor = (minor: number) => (minor / 100).toFixed(2)
 
 type PassengerLike = {
   type?: string | null
@@ -230,7 +230,9 @@ export const searchFlights = async (input: SearchFlightsInput) => {
   }
 }
 
-export const getFlightOffer = async (id: string) => {
+// Fetches the offer fresh from Duffel and refuses expired or unsupported fares.
+// Used by the offer endpoint and by booking, so both apply the same checks.
+export const getLiveOffer = async (id: string) => {
   try {
     const { data: offer } = await duffel.offers.get(id, {
       return_available_services: true,
@@ -244,10 +246,7 @@ export const getFlightOffer = async (id: string) => {
       throw new AppError('This fare cannot be booked right now', 422)
     }
 
-    return {
-      ...mapOffer(offer),
-      availableServices: offer.available_services ?? [],
-    }
+    return offer
   } catch (error: any) {
     if (error instanceof AppError) throw error
 
@@ -258,5 +257,14 @@ export const getFlightOffer = async (id: string) => {
     const message = error?.errors?.[0]?.message || 'Could not fetch flight offer'
 
     throw new AppError(message, error?.meta?.status || 502)
+  }
+}
+
+export const getFlightOffer = async (id: string) => {
+  const offer = await getLiveOffer(id)
+
+  return {
+    ...mapOffer(offer),
+    availableServices: offer.available_services ?? [],
   }
 }
