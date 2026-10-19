@@ -7,6 +7,7 @@ import { PlaneTakeoff } from "lucide-react";
 const links = {
   Product: [
     { label: "Book a Flight", href: "/search" },
+    { label: "Join Waitlist", href: "/join", badge: "New" },
     { label: "Popular Routes", href: "/search" },
     { label: "Corporate Travel", href: "/corporate" },
     { label: "Travel Companion", href: "/companion", badge: "App" },

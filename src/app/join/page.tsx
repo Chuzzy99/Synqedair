@@ -73,7 +73,25 @@ export default function JoinPage() {
     if (!email.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch("https://formspree.io/f/mdeoyvzn", {
+      // Post to our waitlist backend (persists to DB and embeds Formspree forwarding)
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          flyingFrom: from.trim() || null,
+          flyingTo: to.trim() || null,
+          frequency: freq || null,
+        }),
+      });
+
+      if (res.ok) {
+        setDone(true);
+        return;
+      }
+
+      // Fallback direct to Formspree if backend encountered an issue
+      const directRes = await fetch("https://formspree.io/f/mdeoyvzn", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -84,8 +102,12 @@ export default function JoinPage() {
           _subject: "🛫 SynqedAir waitlist — /join page",
         }),
       });
-      if (!res.ok) setError("Something went wrong. Try again.");
-      else setDone(true);
+
+      if (!directRes.ok) {
+        setError("Something went wrong. Please try again.");
+      } else {
+        setDone(true);
+      }
     } catch {
       setError("Network error — please try again.");
     } finally {

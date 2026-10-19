@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import FlightSearchForm from "@/components/FlightSearchForm";
@@ -114,23 +115,40 @@ export default function Home() {
           <motion.div variants={staggerContainer} initial="hidden" animate="show" className="max-w-xl">
 
             {/* Mobile greeting */}
-            <motion.div variants={fadeUp} className="flex items-center gap-4 mb-8 md:hidden">
-              <div className="w-10 h-10 rounded-full bg-ice flex items-center justify-center text-indigo">
-                <PlaneTakeoff className="w-5 h-5" />
+            <motion.div variants={fadeUp} className="flex items-center justify-between mb-8 md:hidden">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-ice flex items-center justify-center text-indigo">
+                  <PlaneTakeoff className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="font-mono text-xs tracking-widest text-ice uppercase block">{greeting}</span>
+                  <h2 className="font-display text-2xl font-semibold mt-1">Where to next?</h2>
+                </div>
               </div>
-              <div>
-                <span className="font-mono text-xs tracking-widest text-ice uppercase block">{greeting}</span>
-                <h2 className="font-display text-2xl font-semibold mt-1">Where to next?</h2>
-              </div>
+              <Link
+                href="/join"
+                className="text-xs font-semibold text-ice bg-white/10 border border-white/15 px-3 py-1.5 rounded-full uppercase tracking-wider"
+              >
+                Waitlist →
+              </Link>
             </motion.div>
 
             {/* Desktop headline */}
             <div className="hidden md:block">
               <motion.span variants={fadeUp} className="font-mono text-xs md:text-sm tracking-widest text-ice uppercase mb-4 block">Travel Synqed</motion.span>
               <motion.h1 variants={fadeUp} className="font-display text-4xl md:text-5xl lg:text-7xl font-semibold leading-[1.06] tracking-tight mb-4 md:mb-6">Where to next?</motion.h1>
-              <motion.p variants={fadeUp} className="text-base md:text-lg leading-relaxed text-white/60 max-w-md">
+              <motion.p variants={fadeUp} className="text-base md:text-lg leading-relaxed text-white/60 max-w-md mb-4">
                 Full price. Every fee shown. The corridors diaspora travelers actually fly — with a real human on WhatsApp when things go sideways.
               </motion.p>
+              <motion.div variants={fadeUp} className="mb-2">
+                <Link
+                  href="/join"
+                  className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-ice hover:text-white transition-colors border border-ice/30 bg-ice/10 px-4 py-2 rounded-full"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-ice animate-pulse" />
+                  Join the Early Access Waitlist →
+                </Link>
+              </motion.div>
             </div>
 
             {/* Search widget */}
@@ -292,9 +310,15 @@ export default function Home() {
                     <h2 className="font-display text-4xl md:text-5xl font-semibold text-white mb-5 leading-tight">
                       The full experience is in the app.
                     </h2>
-                    <p className="text-white/60 text-base md:text-lg leading-relaxed">
+                    <p className="text-white/60 text-base md:text-lg leading-relaxed mb-6">
                       Book on the web. Then unlock the AI Travel Companion, automatic check-in, visa alerts, smart refunds, and real-time gate alerts in the Synqed Air app.
                     </p>
+                    <Link
+                      href="/join"
+                      className="inline-flex items-center gap-2 bg-white text-indigo font-semibold px-6 py-3.5 rounded-full hover:bg-ice transition-colors text-base shadow-[0_4px_24px_-8px_rgba(255,255,255,0.25)]"
+                    >
+                      Join the launch waitlist <ArrowRight className="w-4 h-4" />
+                    </Link>
                   </div>
                   <div className="flex flex-wrap gap-3 shrink-0">
                     {["Automatic check-in", "Visa alerts", "Smart refunds", "Gate alerts"].map((feat) => (

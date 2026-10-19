@@ -86,3 +86,16 @@ model Transaction {
   metadata        String?       // JSON string of raw provider response (never card data)
   createdAt       DateTime      @default(now())
 }
+
+model WaitlistEntry {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  flyingFrom String?
+  flyingTo   String?
+  frequency  String?
+  whatsapp   String?
+  source     String?  @default("web")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+

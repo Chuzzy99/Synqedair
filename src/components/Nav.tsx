@@ -26,9 +26,15 @@ export default function Nav() {
           <NavGreeting className="md:hidden lg:flex" />
         </div>
 
-        <nav className="hidden items-center gap-8 text-sm text-[#AEB6CC] md:flex">
+        <nav className="hidden items-center gap-7 text-sm text-[#AEB6CC] md:flex">
           <Link href="/about" className="transition-colors hover:text-white">
             About Us
+          </Link>
+          <Link
+            href="/join"
+            className="transition-colors text-ice hover:text-white font-medium flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full text-xs uppercase tracking-wider"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-ice animate-pulse" /> Waitlist
           </Link>
           <Link href="/corporate" className="transition-colors hover:text-white">
             Corporate
@@ -69,6 +75,13 @@ export default function Nav() {
             transition={{ duration: 0.2 }}
             className="absolute top-full left-0 w-full bg-indigo shadow-lg border-t border-white/10 md:hidden flex flex-col py-4 px-6 z-40"
           >
+            <Link
+              href="/join"
+              onClick={() => setIsOpen(false)}
+              className="py-3 text-ice hover:text-white transition-colors border-b border-white/5 flex items-center gap-2 font-medium"
+            >
+              <span className="w-2 h-2 rounded-full bg-ice animate-pulse" /> Join Waitlist
+            </Link>
             <Link
               href="/about"
               onClick={() => setIsOpen(false)}

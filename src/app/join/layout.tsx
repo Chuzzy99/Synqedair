@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "SynqedAir – Know the full fare before you book",
+  title: "Join the Waitlist | Synqed Air",
   description:
-    "SynqedAir is being built for travelers flying to, from, and within Africa: full fares up front, and a real person when plans change.",
+    "Synqed Air is being built for travelers flying to, from, and within Africa: full fares up front, and human support when plans change.",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
 };
 
