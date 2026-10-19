@@ -15,37 +15,63 @@ function SuccessContent() {
   const [duffelOrderId, setDuffelOrderId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function completeBooking() {
-      if (!reference) {
-        setStatus("error");
-        return;
-      }
+    if (!reference) {
+      setStatus("error");
+      return;
+    }
 
+    let attempts = 0;
+    const MAX_POLL = 12;      // 12 × 2.5 s = 30 s max wait for webhook
+    const POLL_INTERVAL = 2500;
+
+    async function pollStatus() {
       try {
-        // Call the backend API to complete the booking
-        // This would typically be done via a webhook, but for now we'll call it directly
-        const res = await fetch("/api/bookings/complete", {
+        const res = await fetch(`/api/bookings/status?reference=${encodeURIComponent(reference!)}`);
+        const data = await res.json();
+
+        if (data.status === "BOOKED") {
+          // Webhook already processed — we're done
+          setOrderId(data.orderId);
+          setDuffelOrderId(data.duffelOrderId);
+          setStatus("success");
+          return;
+        }
+
+        if (data.status === "FAILED") {
+          setStatus("error");
+          return;
+        }
+
+        // PENDING or PAID — webhook hasn't fired yet
+        attempts++;
+        if (attempts < MAX_POLL) {
+          setTimeout(pollStatus, POLL_INTERVAL);
+          return;
+        }
+
+        // Webhook didn't fire within 30 s — call /complete as fallback
+        console.warn("[Success] Webhook timeout — falling back to /api/bookings/complete");
+        const fallbackRes = await fetch("/api/bookings/complete", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reference }),
         });
+        const fallbackData = await fallbackRes.json();
 
-        const data = await res.json();
-        
-        if (data.success) {
-          setOrderId(data.orderId);
-          setDuffelOrderId(data.duffelOrderId);
+        if (fallbackData.success) {
+          setOrderId(fallbackData.orderId);
+          setDuffelOrderId(fallbackData.duffelOrderId);
           setStatus("success");
         } else {
           setStatus("error");
         }
       } catch (e) {
-        console.error(e);
+        console.error("[Success] Status poll error:", e);
         setStatus("error");
       }
     }
 
-    completeBooking();
+    pollStatus();
   }, [reference]);
 
   if (status === "loading") {

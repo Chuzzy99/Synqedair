@@ -46,36 +46,6 @@ export default function Home() {
   const [userOriginCity, setUserOriginCity] = useState<string>(DEFAULT_ORIGIN.city);
   const [userLocation, setUserLocation] = useState("New York");
 
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [waitlistWhatsapp, setWaitlistWhatsapp] = useState("");
-  const [waitlistLoading, setWaitlistLoading] = useState(false);
-  const [waitlistDone, setWaitlistDone] = useState(false);
-  const [waitlistError, setWaitlistError] = useState("");
-
-  const handleWaitlist = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setWaitlistError("");
-    if (!waitlistEmail.trim()) return;
-    setWaitlistLoading(true);
-    try {
-      const res = await fetch("https://formspree.io/f/mdeoyvzn", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: waitlistEmail.trim(),
-          whatsapp: waitlistWhatsapp.trim() || "—",
-          _subject: "🛫 New Synqed Air waitlist signup",
-        }),
-      });
-      if (!res.ok) setWaitlistError("Something went wrong. Try again.");
-      else setWaitlistDone(true);
-    } catch {
-      setWaitlistError("Network error — please try again.");
-    } finally {
-      setWaitlistLoading(false);
-    }
-  };
-
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting("Good morning");
@@ -300,8 +270,8 @@ export default function Home() {
             </div>
 
 
-          {/* ── Combined App + Waitlist ── */}
-          <div id="waitlist" className="bg-indigo rounded-3xl mx-auto relative overflow-hidden mt-16">
+          {/* ── App Preview ── */}
+          <div className="bg-indigo rounded-3xl mx-auto relative overflow-hidden mt-16">
 
             {/* Glow */}
             <div className="pointer-events-none absolute inset-0">
@@ -312,7 +282,7 @@ export default function Home() {
             <div className="relative z-10 px-8 md:px-16 lg:px-24 py-20 md:py-32">
 
               {/* App info row */}
-              <div className="pb-16 mb-16 border-b border-white/10">
+              <div>
                 <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
                   <span className="w-2 h-2 rounded-full bg-ice animate-pulse" />
                   <span className="text-xs font-semibold text-ice tracking-widest uppercase">Launching Dec 31</span>
@@ -334,51 +304,6 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-              </div>
-
-              {/* Waitlist form */}
-              <div className="max-w-xl mx-auto text-center">
-                {!waitlistDone ? (
-                  <motion.div key="form" initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }}>
-                    <h2 className="font-display text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-white mb-5">
-                      Your seat doesn&apos;t have to wait.
-                    </h2>
-                    <p className="text-ice/75 text-base md:text-lg leading-relaxed mb-10 max-w-lg mx-auto">
-                      Drop your email and we&apos;ll notify you the moment the app goes live — early joiners get priority access and a launch-week fare credit.
-                    </p>
-                    <form onSubmit={handleWaitlist} className="flex flex-col gap-4 max-w-md mx-auto">
-                      <input id="waitlist-email" type="email" required value={waitlistEmail}
-                        onChange={(e) => setWaitlistEmail(e.target.value)} disabled={waitlistLoading}
-                        placeholder="Your email address"
-                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-6 py-4 text-base outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
-                      <input id="waitlist-whatsapp" type="tel" value={waitlistWhatsapp}
-                        onChange={(e) => setWaitlistWhatsapp(e.target.value)} disabled={waitlistLoading}
-                        placeholder="WhatsApp number (optional) +1…"
-                        className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 rounded-2xl px-6 py-4 text-base outline-none focus:ring-2 focus:ring-[#3DDCFF] transition-all disabled:opacity-60" />
-                      {waitlistError && <p className="text-red-300 text-sm text-center">{waitlistError}</p>}
-                      <button type="submit" disabled={waitlistLoading || !waitlistEmail.trim()}
-                        className="w-full bg-white text-indigo font-semibold py-4 rounded-2xl hover:bg-ice transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-base shadow-[0_4px_24px_-8px_rgba(255,255,255,0.25)]">
-                        {waitlistLoading
-                          ? <><Loader2 className="w-5 h-5 animate-spin" /> Securing your spot…</>
-                          : <>Get early access <ArrowRight className="w-5 h-5" /></>}
-                      </button>
-                      <p className="text-white/30 text-sm mt-1">No spam. One email when we launch — that&apos;s it.</p>
-                    </form>
-                  </motion.div>
-                ) : (
-                  <motion.div key="success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4 }}
-                    className="flex flex-col items-center gap-6">
-                    <div className="w-20 h-20 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
-                      <Check className="w-9 h-9 text-[#3DDCFF]" />
-                    </div>
-                    <div>
-                      <h2 className="font-display text-3xl md:text-4xl font-semibold text-white mb-3">You&apos;re on the list.</h2>
-                      <p className="text-ice/70 text-base md:text-lg max-w-md mx-auto">
-                        We&apos;ll message you the moment the app is live. Check WhatsApp too if you shared your number.
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
               </div>
 
             </div>

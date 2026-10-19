@@ -237,7 +237,7 @@ export default function AboutPage() {
                 Visit SynqedAI <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
-                href="/#waitlist"
+                href="/join"
                 className="inline-flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white font-semibold py-3 px-6 rounded-xl hover:bg-white/15 transition-colors text-sm"
               >
                 Join our waitlist <ArrowRight className="w-4 h-4" />

@@ -171,7 +171,7 @@ export default function Companion() {
               Join the waitlist for early access when we launch December 31 — and a launch-week fare credit.
             </p>
             <Link
-              href="/#waitlist"
+              href="/join"
               className="inline-flex items-center gap-2 bg-white text-[#0A1128] font-semibold py-3 px-6 rounded-xl hover:bg-[#3DDCFF] transition-colors text-sm"
             >
               Join the waitlist →

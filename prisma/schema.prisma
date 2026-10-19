@@ -7,17 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// EXISTING MODELS (Paystack + Duffel flow — do not break)
+// ─────────────────────────────────────────────────────────────────────────────
+
 model Order {
-  id              String   @id @default(uuid())
-  duffelOrderId   String?  @unique
-  offerId         String
-  totalAmount     Float
-  currency        String
-  paystackRef     String?  @unique
-  status          String   @default("PENDING") // PENDING, PAID, BOOKED, FAILED
-  passengerDetails String? // JSON string of passengers
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default(uuid())
+  duffelOrderId    String?  @unique
+  offerId          String
+  totalAmount      Float
+  currency         String
+  paystackRef      String?  @unique
+  status           String   @default("PENDING") // PENDING, PAID, BOOKED, FAILED
+  passengerDetails String?  // JSON string of passengers
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model TopUpLog {
@@ -26,4 +30,59 @@ model TopUpLog {
   currency  String
   status    String   @default("SUCCESS")
   createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NEW MODELS (Full payment orchestration layer — Phase 1 of v1 backend)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  phone     String?
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Booking {
+  id               String          @id @default(uuid())
+  userId           String?
+  user             User?           @relation(fields: [userId], references: [id])
+  pnr              String?         @unique // Issued by Airline / Duffel
+  offerId          String?         // Duffel Offer ID
+  totalAmount      Int             // Stored in smallest currency unit (e.g. kobo, cents)
+  currency         String          // Local currency shown to customer (NGN, USD, GBP…)
+  status           String          @default("PENDING") // PENDING, AUTHORIZED, CONFIRMED, CANCELLED, REFUNDED
+  passengerDetails String?         // JSON string of passenger data
+  paymentIntents   PaymentIntent[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+model PaymentIntent {
+  id           String        @id @default(uuid())
+  bookingId    String
+  booking      Booking       @relation(fields: [bookingId], references: [id])
+  provider     String        // STRIPE | PAYSTACK
+  providerId   String        @unique // e.g. pi_xxx (Stripe) or reference (Paystack)
+  amount       Int           // Stored in smallest currency unit
+  currency     String
+  status       String        @default("REQUIRES_PAYMENT_METHOD")
+  // Statuses: REQUIRES_PAYMENT_METHOD | REQUIRES_ACTION | REQUIRES_CAPTURE | SUCCEEDED | CANCELED | FAILED
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Transaction {
+  id              String        @id @default(uuid())
+  paymentIntentId String
+  paymentIntent   PaymentIntent @relation(fields: [paymentIntentId], references: [id])
+  type            String        // AUTHORIZATION | CAPTURE | REFUND | CHARGEBACK
+  amount          Int           // Stored in smallest currency unit
+  status          String        // PENDING | SUCCESS | FAILED
+  providerRef     String?
+  metadata        String?       // JSON string of raw provider response (never card data)
+  createdAt       DateTime      @default(now())
 }
