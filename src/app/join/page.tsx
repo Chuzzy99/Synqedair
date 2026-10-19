@@ -91,7 +91,7 @@ export default function JoinPage() {
       }
 
       // Fallback direct to Formspree if backend encountered an issue
-      const directRes = await fetch("https://formspree.io/f/mdeoyvzn", {
+      const directRes = await fetch("https://formspree.io/f/xvkzyyqj", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const FORMSPREE_ENDPOINT =
-  process.env.FORMSPREE_WAITLIST_ENDPOINT || "https://formspree.io/f/mdeoyvzn";
+  process.env.FORMSPREE_WAITLIST_ENDPOINT || "https://formspree.io/f/xvkzyyqj";
 
 export async function POST(req: Request) {
   try {
