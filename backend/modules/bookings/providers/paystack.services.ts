@@ -83,6 +83,7 @@ type VerifyResponse = {
     id?: number
     status?: string
     amount?: number
+    requested_amount?: number
     currency?: string
     reference?: string
   }
@@ -124,9 +125,10 @@ export const verifyPaystackTransaction = async (reference: string) => {
     throw new AppError('Could not verify the payment', 502)
   }
 
-  return {
+   return {
     status: data.status ?? 'unknown',
-    amountMinor: BigInt(data.amount),
+    // The amount we asked for. If a customer is made to pay Paystack's fee, `amount` includes it
+    amountMinor: BigInt(data.requested_amount ?? data.amount),
     currency: data.currency,
     providerPaymentId: String(data.id),
   }

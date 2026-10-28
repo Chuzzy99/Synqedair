@@ -1,5 +1,10 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma.js'
+import {
+  FULFILLMENT_LOCK_MINUTES,
+  FULFILLMENT_RETRY_AFTER_MINUTES,
+  MAX_FULFILLMENT_ATTEMPTS,
+} from './bookings.constants.js'
 
 export type CreateBookingData = Omit<Prisma.BookingUncheckedCreateInput, 'reference'>
 
@@ -59,4 +64,83 @@ export const markBookingRefundRequired = (id: string, reason: string, providerPa
   prisma.booking.updateMany({
     where: { id, status: { in: ['PENDING_PAYMENT', 'FAILED', 'EXPIRED'] } },
     data: { status: 'REFUND_REQUIRED', failureReason: reason, paidAt: new Date(), ...(providerPaymentId !== undefined && { providerPaymentId }) },
+  })
+
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000)
+
+export const findBookingById = (id: string) => prisma.booking.findUnique({ where: { id } })
+
+// Atomic claim: only one caller gets `true`, so only one worker ever talks to Duffel
+export const claimBookingForFulfillment = async (id: string) => {
+  const { count } = await prisma.booking.updateMany({
+    where: {
+      id,
+      status: 'PAID',
+      fulfillmentAttempts: { lt: MAX_FULFILLMENT_ATTEMPTS },
+      OR: [
+        { fulfillmentLockedAt: null },
+        { fulfillmentLockedAt: { lt: minutesAgo(FULFILLMENT_LOCK_MINUTES) } },
+      ],
+    },
+    data: { fulfillmentLockedAt: new Date(), fulfillmentAttempts: { increment: 1 } },
+  })
+
+  return count === 1
+}
+
+// Temporary failure: let the sweeper try again later
+export const releaseFulfillmentLock = (id: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'PAID' },
+    data: { fulfillmentLockedAt: null },
+  })
+
+export const markBookingBooked = (
+  id: string,
+  data: {
+    duffelOrderId: string
+    airlineBookingReference: string | null
+    passengers: Prisma.InputJsonValue
+  },
+) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'PAID' },
+    data: { status: 'BOOKED', bookedAt: new Date(), fulfillmentLockedAt: null, ...data },
+  })
+
+// Paid, but we can't deliver the ticket. A person must look at it
+export const markPaidBookingRefundRequired = (id: string, reason: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'PAID' },
+    data: { status: 'REFUND_REQUIRED', failureReason: reason, fulfillmentLockedAt: null },
+  })
+
+export const findBookingsAwaitingFulfillment = () =>
+  prisma.booking.findMany({
+    where: {
+      status: 'PAID',
+      fulfillmentAttempts: { lt: MAX_FULFILLMENT_ATTEMPTS },
+      updatedAt: { lt: minutesAgo(FULFILLMENT_RETRY_AFTER_MINUTES) },
+      OR: [
+        { fulfillmentLockedAt: null },
+        { fulfillmentLockedAt: { lt: minutesAgo(FULFILLMENT_LOCK_MINUTES) } },
+      ],
+    },
+    select: { id: true },
+    orderBy: { paidAt: 'asc' },
+    take: 20,
+  })
+
+// Out of attempts, so stop retrying and hand it to a person
+export const failExhaustedBookings = () =>
+  prisma.booking.updateMany({
+    where: {
+      status: 'PAID',
+      fulfillmentAttempts: { gte: MAX_FULFILLMENT_ATTEMPTS },
+      OR: [
+        { fulfillmentLockedAt: null },
+        { fulfillmentLockedAt: { lt: minutesAgo(FULFILLMENT_LOCK_MINUTES) } },
+      ],
+    },
+    data: { status: 'REFUND_REQUIRED', failureReason: 'duffel_retries_exhausted', fulfillmentLockedAt: null },
   })

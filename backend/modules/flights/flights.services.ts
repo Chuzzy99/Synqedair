@@ -118,6 +118,8 @@ const mapOffer = (offer: MappableOffer) => {
     passengers: offer.passengers.map((p) => ({
       id: p.id,
       type: p.type,
+      // Age used in the search. The frontend shows it so the DOB entered matches it
+      age: (p as { age?: number | null }).age ?? null,
     })),
 
     slices: offer.slices.map((slice) => ({
@@ -187,7 +189,7 @@ export const searchFlights = async (input: SearchFlightsInput) => {
       type: 'adult' as const,
     })),
     ...input.childAges.map((age) => ({ age })),
-    ...Array.from({ length: input.infants }, () => ({ age: 1 })),
+    ...input.infantAges.map((age) => ({ age })),
   ]
 
   try {

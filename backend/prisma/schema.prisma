@@ -101,6 +101,8 @@ model Booking {
   duffelOrderId           String?   @unique
   airlineBookingReference String? // the airline's own PNR
   bookedAt                DateTime?
+  fulfillmentAttempts Int       @default(0)
+  fulfillmentLockedAt DateTime?
 
   // Submitted traveler details and selected extras (snapshot at payment init)
   passengers Json

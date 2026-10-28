@@ -24,6 +24,15 @@ const shiftDate = (date: string, years = 0, days = 0) => {
   return new Date(Date.UTC(y! + years, m! - 1, d! + days)).toISOString().slice(0, 10)
 }
 
+// Whole years between a date of birth and a given date (both YYYY-MM-DD)
+const ageOn = (bornOn: string, on: string) => {
+  const [by, bm, bd] = bornOn.split('-').map(Number)
+  const [oy, om, od] = on.split('-').map(Number)
+  let age = oy! - by!
+  if (om! < bm! || (om === bm && od! < bd!)) age--
+  return age
+}
+
 export const getTravelDates = (offer: DuffelOffer): TravelDates => {
   const dates = offer.slices
     .flatMap((slice) => slice.segments.map((segment) => segment.departing_at.slice(0, 10)))
@@ -83,6 +92,16 @@ export const buildBookingPassengers = (
 
     if (p.bornOn < range.min || p.bornOn > range.max) {
       throw new AppError(`${label}: ${bornOnMessage(type)}`, 422)
+    }
+
+    // Duffel locks in the age used in the search and rejects the order if the DOB doesn't match it.
+    // Catch it here, before the customer pays
+    const searchedAge = (offerPassenger as { age?: number | null }).age
+    if (searchedAge != null && ageOn(p.bornOn, dates.first) !== searchedAge) {
+      throw new AppError(
+        `${label}: date of birth must make them ${searchedAge} on the first travel date (you searched with age ${searchedAge})`,
+        422,
+      )
     }
 
     let passport: BookingPassenger['passport'] = null

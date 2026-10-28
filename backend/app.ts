@@ -14,6 +14,7 @@ import authRoutes from './modules/auth/auth.routes.js';
 import flightsRoutes from "./modules/flights/flights.routes.js"
 import bookingsRoutes from './modules/bookings/bookings.routes.js'
 
+
 const app = express();
 
 // Required behind Render/Railway/Nginx so rate limiting sees the real client IP
