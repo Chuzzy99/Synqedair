@@ -157,6 +157,20 @@ export const retrieveStripePayment = async (sessionId: string) => {
 
   const currency = (session.currency ?? '').toUpperCase()
   const receipt = readReceipt(session.payment_intent, currency)
+    const kind = (value: unknown) =>
+    value === null || value === undefined ? String(value) : typeof value === 'string' ? 'string' : 'object'
+
+  const intent = session.payment_intent
+  const charge = intent && typeof intent !== 'string' ? intent.latest_charge : undefined
+  const transaction = charge && typeof charge !== 'string' ? charge.balance_transaction : undefined
+
+  console.log('[RECEIPT DEBUG]', {
+    paymentIntent: kind(intent),
+    latestCharge: kind(charge),
+    balanceTransaction: kind(transaction),
+    balanceCurrency: transaction && typeof transaction !== 'string' ? transaction.currency : undefined,
+    sessionCurrency: currency,
+  })
 
   return {
     paid,
