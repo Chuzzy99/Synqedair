@@ -8,7 +8,7 @@ import { env } from './config/env.js';
 import { globalRateLimiter } from './middleware/rateLimiterMiddleware.js';
 import { errorMiddleware } from './middleware/errorMiddleware.js';
 import { AppError } from './utils/appError.js';
-import { paystackWebhookController } from './modules/bookings/bookings.webhooks.controller.js';
+import { paystackWebhookController,stripeWebhookController } from './modules/bookings/bookings.webhooks.controller.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
 import flightsRoutes from "./modules/flights/flights.routes.js"
@@ -26,6 +26,11 @@ app.post(
   '/api/v1/webhooks/paystack',
   express.raw({ type: 'application/json', limit: '100kb' }),
   paystackWebhookController,
+);
+app.post(
+  '/api/v1/webhooks/stripe',
+  express.raw({ type: 'application/json', limit: '100kb' }),
+  stripeWebhookController,
 );
 
 

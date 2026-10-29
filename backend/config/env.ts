@@ -27,11 +27,19 @@ const envSchema = z.object({
     )
     .pipe(z.array(z.string().url()).min(1)),
 
-  // Payments
+  // Payments: Paystack
   PAYSTACK_SECRET_KEY: z.string().min(1, 'PAYSTACK_SECRET_KEY is required'),
   EXCHANGE_RATE_API_KEY: z.string().min(1, 'EXCHANGE_RATE_API_KEY is required'),
   FX_MARGIN_PERCENT: z.coerce.number().min(0).max(20).default(2),
   FX_CACHE_MINUTES: z.coerce.number().positive().default(60),
+
+  // Payments: Stripe (US account)
+  STRIPE_SECRET_KEY: z.string().min(1, 'STRIPE_SECRET_KEY is required'),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1, 'STRIPE_WEBHOOK_SECRET is required'),
+  // Percentage part of Stripe's fee for an international card on a US account (2.9% + 1.5%).
+  // GBP and EUR charges get +1% currency conversion added in code.
+  // Lower this only after your real payments show cheaper fees on average
+  STRIPE_FEE_PERCENT: z.coerce.number().min(0).max(10).default(4.4),
 });
 
 const parsed = envSchema.safeParse(process.env);
