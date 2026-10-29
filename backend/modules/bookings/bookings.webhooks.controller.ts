@@ -125,6 +125,8 @@ export const stripeWebhookController = asyncHandler(async (req: Request, res: Re
     amountMinor: payment.amountMinor,
     currency: payment.currency,
     providerPaymentId: payment.providerPaymentId,
+    providerFeeMinor: payment.feeMinor,
+    netReceivedMinor: payment.netMinor,
   })
 
   console.log('[STRIPE WEBHOOK] confirm result', {

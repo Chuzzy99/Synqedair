@@ -111,11 +111,30 @@ export const constructStripeEvent = (rawBody: Buffer, signature: string | undefi
 }
 
 // Asks Stripe directly what happened to a session. Returns null when Stripe doesn't know it
+// Reads the fee and net amount Stripe booked for this charge. Null if Stripe hasn't recorded it yet
+const readReceipt = (paymentIntent: Stripe.Checkout.Session['payment_intent'], currency: string) => {
+  if (!paymentIntent || typeof paymentIntent === 'string') return null
+
+  const charge = paymentIntent.latest_charge
+  if (!charge || typeof charge === 'string') return null
+
+  const transaction = charge.balance_transaction
+  if (!transaction || typeof transaction === 'string') return null
+
+  // Only comparable when Stripe settled in the same currency we charged
+  if (transaction.currency.toUpperCase() !== currency) return null
+
+  return { feeMinor: BigInt(transaction.fee), netMinor: BigInt(transaction.net) }
+}
+
+// Asks Stripe directly what happened to a session. Returns null when Stripe doesn't know it
 export const retrieveStripePayment = async (sessionId: string) => {
   let session: Stripe.Checkout.Session
 
   try {
-    session = await stripe.checkout.sessions.retrieve(sessionId)
+    session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent.latest_charge.balance_transaction'],
+    })
   } catch (error) {
     if (
       error instanceof Stripe.errors.StripeInvalidRequestError &&
@@ -136,11 +155,16 @@ export const retrieveStripePayment = async (sessionId: string) => {
     throw new AppError('Could not verify the payment', 502)
   }
 
+  const currency = (session.currency ?? '').toUpperCase()
+  const receipt = readReceipt(session.payment_intent, currency)
+
   return {
     paid,
     providerReference: session.client_reference_id,
     amountMinor: BigInt(session.amount_total ?? 0),
-    currency: (session.currency ?? '').toUpperCase(),
+    currency,
     providerPaymentId: paymentIntentId ?? '',
+    feeMinor: receipt?.feeMinor ?? null,
+    netMinor: receipt?.netMinor ?? null,
   }
 }

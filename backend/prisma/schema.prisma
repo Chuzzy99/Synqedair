@@ -96,6 +96,11 @@ model Booking {
   // Stripe PaymentIntent id or Paystack transaction id. Needed later for refunds
   providerPaymentId String?
   paidAt            DateTime?
+    // What the provider actually took and what we actually received, in chargeCurrency minor units.
+  // Filled in when the payment is confirmed. Empty on bookings paid before this was added
+  providerFeeMinor BigInt?
+  netReceivedMinor BigInt?
+  
 
   // Duffel, filled in after the order is created
   duffelOrderId           String?   @unique

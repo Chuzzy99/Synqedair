@@ -9,6 +9,8 @@ type ConfirmedPayment = {
   amountMinor: bigint
   currency: string
   providerPaymentId: string
+  providerFeeMinor?: bigint | null
+  netReceivedMinor?: bigint | null
 }
 
 export type PaymentOutcome = 'paid' | 'already_processed' | 'unknown_booking' | 'amount_mismatch'
@@ -36,9 +38,27 @@ export const confirmBookingPayment = async (
     return { outcome: 'amount_mismatch', bookingId: booking.id }
   }
 
-  const { count } = await markBookingPaid(booking.id, payment.providerPaymentId)
+  const providerFeeMinor = payment.providerFeeMinor ?? null
+  const netReceivedMinor = payment.netReceivedMinor ?? null
+
+  const { count } = await markBookingPaid(booking.id, payment.providerPaymentId, {
+    providerFeeMinor,
+    netReceivedMinor,
+  })
 
   if (count === 0) return { outcome: 'already_processed', bookingId: booking.id }
+
+  if (netReceivedMinor === null) {
+    console.warn(`[RECEIPT] no fee details yet for ${booking.reference}`)
+  } else if (
+    booking.chargeCurrency === booking.currency &&
+    netReceivedMinor < BigInt(booking.totalMinor)
+  ) {
+    // We received less than airline + our fee + extras, so part of the service fee was lost
+    console.error(
+      `[MARGIN SHORTFALL] ${booking.reference}: received ${netReceivedMinor} but needed ${booking.totalMinor} ${booking.currency}`,
+    )
+  }
 
   return { outcome: 'paid', bookingId: booking.id }
 }

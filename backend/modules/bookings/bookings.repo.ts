@@ -53,10 +53,21 @@ export const markBookingFailed = (id: string, reason: string) =>
   prisma.booking.findUnique({ where: { providerReference } })
 
 // Only moves a booking that hasn't been paid yet, so a duplicate webhook changes nothing
-export const markBookingPaid = (id: string, providerPaymentId: string) =>
+export const markBookingPaid = (
+  id: string,
+  providerPaymentId: string,
+  receipt?: { providerFeeMinor: bigint | null; netReceivedMinor: bigint | null },
+) =>
   prisma.booking.updateMany({
     where: { id, status: { in: ['PENDING_PAYMENT', 'FAILED', 'EXPIRED'] } },
-    data: { status: 'PAID', paidAt: new Date(), providerPaymentId, failureReason: null },
+    data: {
+      status: 'PAID',
+      paidAt: new Date(),
+      providerPaymentId,
+      failureReason: null,
+      providerFeeMinor: receipt?.providerFeeMinor ?? null,
+      netReceivedMinor: receipt?.netReceivedMinor ?? null,
+    },
   })
 
 // Money arrived but something is wrong. A person must look at it before anything is booked
