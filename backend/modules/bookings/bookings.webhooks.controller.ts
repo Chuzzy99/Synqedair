@@ -2,20 +2,23 @@ import type { Request, Response } from 'express'
 import type Stripe from 'stripe'
 import { asyncHandler } from '../../utils/asyncHandler.js'
 import { confirmBookingPayment } from './bookings.payments.js'
+import { fulfillBooking } from './bookings.fufilments.js'
+import { recordStripeReceiptLater } from './bookings.receipts.js'
 import { verifyPaystackSignature, verifyPaystackTransaction } from './providers/paystack.services.js'
 import { constructStripeEvent, retrieveStripePayment } from './providers/stripe.services.js'
-import { fulfillBooking } from './bookings.fufilments.js'
 
 type PaystackEvent = { event?: string; data?: { reference?: string } }
 
 export const paystackWebhookController = asyncHandler(async (req: Request, res: Response) => {
   const rawBody: unknown = req.body
-   console.log('[PAYSTACK WEBHOOK] HIT', {
+
+  console.log('[PAYSTACK WEBHOOK] HIT', {
     time: new Date().toISOString(),
     method: req.method,
     contentType: req.headers['content-type'],
   })
-// 1. Only Paystack can produce a valid signature
+
+  // 1. Only Paystack can produce a valid signature
   if (!Buffer.isBuffer(rawBody) || !verifyPaystackSignature(rawBody, req.header('x-paystack-signature'))) {
     res.status(401).json({ success: false, message: 'Invalid signature' })
     return
@@ -59,15 +62,18 @@ export const paystackWebhookController = asyncHandler(async (req: Request, res: 
 
   console.log('[WEBHOOK] confirm result', { reference, ...result, at: new Date().toISOString() })
 
-    // Reply to Paystack right away, then book in the background. Duffel can take several seconds
+  // Reply to Paystack right away, then book in the background. Duffel can take several seconds
   if (result.bookingId && (result.outcome === 'paid' || result.outcome === 'already_processed')) {
     console.log('[WEBHOOK] starting fulfilment', result.bookingId, new Date().toISOString())
     void fulfillBooking(result.bookingId)
-      .then((outcome) => console.log('[WEBHOOK] fulfilment finished', result.bookingId, outcome, new Date().toISOString()))
+      .then((outcome) =>
+        console.log('[WEBHOOK] fulfilment finished', result.bookingId, outcome, new Date().toISOString()),
+      )
       .catch((error) => console.error('Fulfillment error:', error))
   } else {
     console.log('[WEBHOOK] NOT starting fulfilment, outcome was', result.outcome)
   }
+
   res.status(200).json({ received: true, outcome: result.outcome })
 })
 
@@ -134,6 +140,13 @@ export const stripeWebhookController = asyncHandler(async (req: Request, res: Re
     ...result,
     at: new Date().toISOString(),
   })
+
+  // Stripe sometimes hasn't recorded the fee yet. Fetch it in the background and save it
+  if (result.outcome === 'paid' && result.bookingId && payment.netMinor === null) {
+    void recordStripeReceiptLater(result.bookingId, payment.providerPaymentId, payment.currency).catch(
+      (error) => console.error('Receipt recording failed:', error),
+    )
+  }
 
   // Reply to Stripe right away, then book in the background. Duffel can take several seconds
   if (result.bookingId && (result.outcome === 'paid' || result.outcome === 'already_processed')) {

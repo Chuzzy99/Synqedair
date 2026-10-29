@@ -110,9 +110,8 @@ export const constructStripeEvent = (rawBody: Buffer, signature: string | undefi
   }
 }
 
-// Asks Stripe directly what happened to a session. Returns null when Stripe doesn't know it
 // Reads the fee and net amount Stripe booked for this charge. Null if Stripe hasn't recorded it yet
-const readReceipt = (paymentIntent: Stripe.Checkout.Session['payment_intent'], currency: string) => {
+const readReceipt = (paymentIntent: string | Stripe.PaymentIntent | null, currency: string) => {
   if (!paymentIntent || typeof paymentIntent === 'string') return null
 
   const charge = paymentIntent.latest_charge
@@ -125,6 +124,20 @@ const readReceipt = (paymentIntent: Stripe.Checkout.Session['payment_intent'], c
   if (transaction.currency.toUpperCase() !== currency) return null
 
   return { feeMinor: BigInt(transaction.fee), netMinor: BigInt(transaction.net) }
+}
+
+// Looks up the fee and net amount for a payment. Null until Stripe has recorded them
+export const fetchStripeReceipt = async (paymentIntentId: string, currency: string) => {
+  try {
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId, {
+      expand: ['latest_charge.balance_transaction'],
+    })
+
+    return readReceipt(intent, currency)
+  } catch (error) {
+    console.error('Stripe receipt lookup failed:', error instanceof Error ? error.message : error)
+    return null
+  }
 }
 
 // Asks Stripe directly what happened to a session. Returns null when Stripe doesn't know it
@@ -157,20 +170,6 @@ export const retrieveStripePayment = async (sessionId: string) => {
 
   const currency = (session.currency ?? '').toUpperCase()
   const receipt = readReceipt(session.payment_intent, currency)
-    const kind = (value: unknown) =>
-    value === null || value === undefined ? String(value) : typeof value === 'string' ? 'string' : 'object'
-
-  const intent = session.payment_intent
-  const charge = intent && typeof intent !== 'string' ? intent.latest_charge : undefined
-  const transaction = charge && typeof charge !== 'string' ? charge.balance_transaction : undefined
-
-  console.log('[RECEIPT DEBUG]', {
-    paymentIntent: kind(intent),
-    latestCharge: kind(charge),
-    balanceTransaction: kind(transaction),
-    balanceCurrency: transaction && typeof transaction !== 'string' ? transaction.currency : undefined,
-    sessionCurrency: currency,
-  })
 
   return {
     paid,

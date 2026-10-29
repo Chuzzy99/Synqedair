@@ -8,6 +8,8 @@ import {
 
 export type CreateBookingData = Omit<Prisma.BookingUncheckedCreateInput, 'reference'>
 
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000)
+
 // Has this fare already been paid for? Used to stop a second payment for the same offer
 export const findPaidBookingForOffer = (offerId: string) =>
   prisma.booking.findFirst({
@@ -49,10 +51,12 @@ export const markBookingFailed = (id: string, reason: string) =>
     where: { id, status: 'PENDING_PAYMENT' },
     data: { status: 'FAILED', failureReason: reason },
   })
-  export const findBookingByProviderReference = (providerReference: string) =>
+
+export const findBookingByProviderReference = (providerReference: string) =>
   prisma.booking.findUnique({ where: { providerReference } })
 
-// Only moves a booking that hasn't been paid yet, so a duplicate webhook changes nothing
+// Only moves a booking that hasn't been paid yet, so a duplicate webhook changes nothing.
+// The receipt (what the provider took and what we received) is saved when it is already known
 export const markBookingPaid = (
   id: string,
   providerPaymentId: string,
@@ -70,14 +74,24 @@ export const markBookingPaid = (
     },
   })
 
+// Fills in a receipt that is still empty, so it can never overwrite earlier data
+export const saveBookingReceipt = (id: string, providerFeeMinor: bigint, netReceivedMinor: bigint) =>
+  prisma.booking.updateMany({
+    where: { id, netReceivedMinor: null },
+    data: { providerFeeMinor, netReceivedMinor },
+  })
+
 // Money arrived but something is wrong. A person must look at it before anything is booked
 export const markBookingRefundRequired = (id: string, reason: string, providerPaymentId?: string) =>
   prisma.booking.updateMany({
     where: { id, status: { in: ['PENDING_PAYMENT', 'FAILED', 'EXPIRED'] } },
-    data: { status: 'REFUND_REQUIRED', failureReason: reason, paidAt: new Date(), ...(providerPaymentId !== undefined && { providerPaymentId }) },
+    data: {
+      status: 'REFUND_REQUIRED',
+      failureReason: reason,
+      paidAt: new Date(),
+      ...(providerPaymentId !== undefined && { providerPaymentId }),
+    },
   })
-
-  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000)
 
 export const findBookingById = (id: string) => prisma.booking.findUnique({ where: { id } })
 
