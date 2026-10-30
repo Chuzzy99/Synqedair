@@ -109,6 +109,7 @@ model Booking {
   bookedAt                DateTime?
   fulfillmentAttempts Int       @default(0)
   fulfillmentLockedAt DateTime?
+  refundAlertSentAt DateTime?
 
   // Submitted traveler details and selected extras (snapshot at payment init)
   passengers Json

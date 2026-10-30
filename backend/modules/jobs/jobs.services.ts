@@ -1,3 +1,4 @@
+import { sendRefundAlerts } from '../bookings/bookings.alerts.js'
 import { retryStuckBookings } from '../bookings/bookings.fufilments.js'
 import { reconcilePendingPayments } from '../bookings/bookings.reconciler.js'
 
@@ -22,6 +23,14 @@ const runJobs = async () => {
     console.log('[JOBS] fulfilment sweep done')
   } else {
     console.error('[JOBS] fulfilment sweep failed:', sweep.reason)
+  }
+
+  // Alerts run last, so a booking that just turned REFUND_REQUIRED is reported in this same run
+  try {
+    const alerts = await sendRefundAlerts()
+    if (alerts.sent > 0 || alerts.failed > 0) console.log('[JOBS] refund alerts', alerts)
+  } catch (error) {
+    console.error('[JOBS] refund alerts failed:', error)
   }
 
   console.log(`[JOBS] finished in ${Date.now() - startedAt}ms`)

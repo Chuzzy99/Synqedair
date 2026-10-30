@@ -43,6 +43,25 @@ const envSchema = z.object({
 
   // Background jobs: the secret cron-job.org sends as "Authorization: Bearer <secret>"
   JOBS_SECRET: z.string().min(32, 'JOBS_SECRET must be at least 32 characters'),
+
+  // Alerts by email through Brevo. Optional so the app still boots without them,
+  // but without them nobody is told when a customer needs a refund
+  BREVO_API_KEY: z.string().min(1).optional(),
+  // Must be a sender you have verified in Brevo
+  ALERT_EMAIL_FROM: z.string().email().optional(),
+  ALERT_EMAIL_FROM_NAME: z.string().min(1).default('Synqued Air Alerts'),
+  // One or more addresses, comma separated
+  ALERT_EMAIL_TO: z
+    .string()
+    .min(1)
+    .transform((value) =>
+      value
+        .split(',')
+        .map((email) => email.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.string().email()).min(1))
+    .optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

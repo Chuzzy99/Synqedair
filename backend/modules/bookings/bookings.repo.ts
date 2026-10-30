@@ -130,6 +130,38 @@ export const markBookingRefundRequired = (id: string, reason: string, providerPa
     },
   })
 
+// REFUND_REQUIRED bookings nobody has been told about yet. Oldest first
+export const findBookingsNeedingRefundAlert = () =>
+  prisma.booking.findMany({
+    where: { status: 'REFUND_REQUIRED', refundAlertSentAt: null },
+    select: {
+      id: true,
+      reference: true,
+      paymentProvider: true,
+      providerPaymentId: true,
+      chargeAmountMinor: true,
+      chargeCurrency: true,
+      failureReason: true,
+      paidAt: true,
+    },
+    orderBy: { updatedAt: 'asc' },
+    take: 20,
+  })
+
+// Only one caller gets count 1, so the same booking is never alerted twice
+export const claimRefundAlert = (id: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'REFUND_REQUIRED', refundAlertSentAt: null },
+    data: { refundAlertSentAt: new Date() },
+  })
+
+// The alert couldn't be delivered, so make the next run try again
+export const releaseRefundAlert = (id: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'REFUND_REQUIRED' },
+    data: { refundAlertSentAt: null },
+  })
+
 export const findBookingById = (id: string) => prisma.booking.findUnique({ where: { id } })
 
 // Atomic claim: only one caller gets `true`, so only one worker ever talks to Duffel
