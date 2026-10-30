@@ -173,6 +173,8 @@ export const retrieveStripePayment = async (sessionId: string) => {
 
   return {
     paid,
+    // 'open' (still payable), 'complete' or 'expired' (the customer ran out of time)
+    sessionStatus: session.status,
     providerReference: session.client_reference_id,
     amountMinor: BigInt(session.amount_total ?? 0),
     currency,

@@ -40,6 +40,9 @@ const envSchema = z.object({
   // GBP and EUR charges get +1% currency conversion added in code.
   // Lower this only after your real payments show cheaper fees on average
   STRIPE_FEE_PERCENT: z.coerce.number().min(0).max(10).default(4.4),
+
+  // Background jobs: the secret cron-job.org sends as "Authorization: Bearer <secret>"
+  JOBS_SECRET: z.string().min(32, 'JOBS_SECRET must be at least 32 characters'),
 });
 
 const parsed = envSchema.safeParse(process.env);

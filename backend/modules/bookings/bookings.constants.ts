@@ -20,3 +20,12 @@ export const MAX_SERVICE_QUANTITY = 10
 export const MAX_FULFILLMENT_ATTEMPTS = 5
 export const FULFILLMENT_LOCK_MINUTES = 5
 export const FULFILLMENT_RETRY_AFTER_MINUTES = 2
+
+// Reconciler: give the webhook time to arrive first, then ask the provider ourselves
+export const PENDING_PAYMENT_CHECK_AFTER_MINUTES = 5
+
+// An unpaid booking older than this is closed as EXPIRED (a late payment can still revive it)
+export const PENDING_PAYMENT_EXPIRE_AFTER_MINUTES = 60
+
+// How many pending bookings one reconciler run looks at
+export const RECONCILE_BATCH_SIZE = 20

@@ -4,6 +4,8 @@ import {
   FULFILLMENT_LOCK_MINUTES,
   FULFILLMENT_RETRY_AFTER_MINUTES,
   MAX_FULFILLMENT_ATTEMPTS,
+  PENDING_PAYMENT_CHECK_AFTER_MINUTES,
+  RECONCILE_BATCH_SIZE,
 } from './bookings.constants.js'
 
 export type CreateBookingData = Omit<Prisma.BookingUncheckedCreateInput, 'reference'>
@@ -50,6 +52,33 @@ export const markBookingFailed = (id: string, reason: string) =>
   prisma.booking.updateMany({
     where: { id, status: 'PENDING_PAYMENT' },
     data: { status: 'FAILED', failureReason: reason },
+  })
+
+// Bookings still waiting for payment that are old enough for the webhook to have arrived.
+// Oldest first, so nothing is starved
+export const findPendingPaymentBookings = () =>
+  prisma.booking.findMany({
+    where: {
+      status: 'PENDING_PAYMENT',
+      createdAt: { lt: minutesAgo(PENDING_PAYMENT_CHECK_AFTER_MINUTES) },
+    },
+    select: {
+      id: true,
+      reference: true,
+      paymentProvider: true,
+      providerReference: true,
+      providerSessionId: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'asc' },
+    take: RECONCILE_BATCH_SIZE,
+  })
+
+// Only closes a booking that is still unpaid. A late payment can still move it to PAID
+export const markBookingExpired = (id: string, reason: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'PENDING_PAYMENT' },
+    data: { status: 'EXPIRED', failureReason: reason },
   })
 
 export const findBookingByProviderReference = (providerReference: string) =>

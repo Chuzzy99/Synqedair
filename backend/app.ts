@@ -13,6 +13,7 @@ import { paystackWebhookController,stripeWebhookController } from './modules/boo
 import authRoutes from './modules/auth/auth.routes.js';
 import flightsRoutes from "./modules/flights/flights.routes.js"
 import bookingsRoutes from './modules/bookings/bookings.routes.js'
+import jobsRoutes from './modules/jobs/jobs,routes.js'
 
 
 const app = express();
@@ -39,6 +40,11 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 app.use(compression());
 app.use(hpp());
+
+// Called by cron-job.org every minute, so it sits BEFORE the global limiter and
+// can't be throttled by it. It has its own limiter for failed attempts instead
+app.use('/api/v1/jobs', jobsRoutes);
+
 app.use(globalRateLimiter);
 
 app.get('/health', (_req, res) => {
