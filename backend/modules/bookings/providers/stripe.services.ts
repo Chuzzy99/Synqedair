@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { env } from '../../../config/env.js'
 import { AppError } from '../../../utils/appError.js'
+import type { RefundResult } from './refund.types.js'
 
 const STRIPE_TIMEOUT_MS = 15000
 
@@ -181,5 +182,44 @@ export const retrieveStripePayment = async (sessionId: string) => {
     providerPaymentId: paymentIntentId ?? '',
     feeMinor: receipt?.feeMinor ?? null,
     netMinor: receipt?.netMinor ?? null,
+  }
+}
+
+// Refunds the whole payment. The idempotency key means that asking twice for the same booking
+// can never refund twice: Stripe hands back the first refund instead.
+// Stripe does not give back its own processing fee on a refund
+export const createStripeRefund = async (
+  paymentIntentId: string,
+  bookingReference: string,
+  idempotencyKey: string,
+): Promise<RefundResult> => {
+  try {
+    const refund = await stripe.refunds.create(
+      { payment_intent: paymentIntentId, metadata: { bookingReference } },
+      { idempotencyKey },
+    )
+
+    if (refund.status === 'failed' || refund.status === 'canceled') {
+      return {
+        ok: false,
+        definite: false,
+        message: `Stripe created refund ${refund.id} but its status is ${refund.status}`,
+      }
+    }
+
+    return { ok: true, refundId: refund.id, status: refund.status ?? 'unknown' }
+  } catch (error) {
+    // Stripe looked at the request and said no, so nothing was refunded
+    const refused =
+      error instanceof Stripe.errors.StripeInvalidRequestError ||
+      error instanceof Stripe.errors.StripeAuthenticationError ||
+      error instanceof Stripe.errors.StripePermissionError ||
+      error instanceof Stripe.errors.StripeRateLimitError
+
+    return {
+      ok: false,
+      definite: refused,
+      message: error instanceof Error ? error.message : 'Unknown Stripe error',
+    }
   }
 }

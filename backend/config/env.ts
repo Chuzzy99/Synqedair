@@ -44,6 +44,10 @@ const envSchema = z.object({
   // Background jobs: the secret cron-job.org sends as "Authorization: Bearer <secret>"
   JOBS_SECRET: z.string().min(32, 'JOBS_SECRET must be at least 32 characters'),
 
+  // Admin actions such as refunds. Keep this different from JOBS_SECRET: that one is stored on
+  // cron-job.org, and the power to refund customers must not live on a third-party site
+  ADMIN_SECRET: z.string().min(32, 'ADMIN_SECRET must be at least 32 characters'),
+
   // Alerts by email through Brevo. Optional so the app still boots without them,
   // but without them nobody is told when a customer needs a refund
   BREVO_API_KEY: z.string().min(1).optional(),

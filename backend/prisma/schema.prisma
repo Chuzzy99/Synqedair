@@ -48,6 +48,9 @@ enum BookingStatus {
   FAILED
   EXPIRED
   REFUND_REQUIRED
+  REFUNDING
+  REFUNDED
+
 }
 
 enum PaymentProvider {
@@ -110,6 +113,9 @@ model Booking {
   fulfillmentAttempts Int       @default(0)
   fulfillmentLockedAt DateTime?
   refundAlertSentAt DateTime?
+  refundedAt        DateTime?
+  providerRefundId  String?
+  refundStatus      String?
 
   // Submitted traveler details and selected extras (snapshot at payment init)
   passengers Json

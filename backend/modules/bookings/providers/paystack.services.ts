@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '../../../config/env.js'
 import { AppError } from '../../../utils/appError.js'
+import type { RefundResult } from './refund.types.js'
 
 const PAYSTACK_TIMEOUT_MS = 15000
 
@@ -142,5 +143,56 @@ export const verifyPaystackTransaction = async (reference: string) => {
     feeMinor,
     // What we receive: the total paid minus Paystack's fee. Correct whoever bears the fee
     netMinor: feeMinor === null ? null : BigInt(data.amount) - feeMinor,
+  }
+}
+
+type RefundResponse = {
+  status?: boolean
+  message?: string
+  data?: { id?: number | string; status?: string }
+}
+
+// Refunds the whole payment. Paystack finishes the refund later (status is usually
+// pending or processing), so a successful answer means "accepted", not "money has arrived"
+export const createPaystackRefund = async (
+  transactionReference: string,
+  note: string,
+): Promise<RefundResult> => {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), PAYSTACK_TIMEOUT_MS)
+
+  let response: Response
+
+  try {
+    response = await fetch('https://api.paystack.co/refund', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      // No amount means a full refund
+      body: JSON.stringify({ transaction: transactionReference, merchant_note: note }),
+      signal: controller.signal,
+    })
+  } catch {
+    // The request may or may not have reached Paystack
+    return { ok: false, definite: false, message: 'Could not reach Paystack' }
+  } finally {
+    clearTimeout(timer)
+  }
+
+  const body = (await response.json().catch(() => null)) as RefundResponse | null
+
+  if (response.ok && body?.status && body.data?.id !== undefined) {
+    return { ok: true, refundId: String(body.data.id), status: body.data.status ?? 'unknown' }
+  }
+
+  // A 4xx (except 408) means Paystack looked at the request and refused it
+  const refused = response.status >= 400 && response.status < 500 && response.status !== 408
+
+  return {
+    ok: false,
+    definite: refused,
+    message: body?.message ?? `Paystack answered with HTTP ${response.status}`,
   }
 }

@@ -13,7 +13,8 @@ import { paystackWebhookController,stripeWebhookController } from './modules/boo
 import authRoutes from './modules/auth/auth.routes.js';
 import flightsRoutes from "./modules/flights/flights.routes.js"
 import bookingsRoutes from './modules/bookings/bookings.routes.js'
-import jobsRoutes from './modules/jobs/jobs,routes.js'
+import jobsRoutes from './modules/jobs/jobs.routes.js'
+import adminRoutes from './modules/admin/admin.routes.js'
 
 
 const app = express();
@@ -54,6 +55,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/flights', flightsRoutes)
 app.use('/api/v1/bookings', bookingsRoutes)
+app.use('/api/v1/admin', adminRoutes)
 
 app.use((req, _res, next) => {
   next(new AppError(`Route not found: ${req.originalUrl}`, 404));

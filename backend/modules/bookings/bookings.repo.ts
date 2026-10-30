@@ -162,6 +162,29 @@ export const releaseRefundAlert = (id: string) =>
     data: { refundAlertSentAt: null },
   })
 
+export const findBookingByReference = (reference: string) =>
+  prisma.booking.findUnique({ where: { reference } })
+
+// Only one caller gets count 1, so a booking can never be refunded twice at the same time
+export const claimBookingForRefund = (id: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'REFUND_REQUIRED' },
+    data: { status: 'REFUNDING' },
+  })
+
+export const markBookingRefunded = (id: string, providerRefundId: string, refundStatus: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'REFUNDING' },
+    data: { status: 'REFUNDED', refundedAt: new Date(), providerRefundId, refundStatus },
+  })
+
+// The provider refused the refund, so nothing moved and it can be tried again
+export const releaseBookingRefund = (id: string) =>
+  prisma.booking.updateMany({
+    where: { id, status: 'REFUNDING' },
+    data: { status: 'REFUND_REQUIRED' },
+  })
+
 export const findBookingById = (id: string) => prisma.booking.findUnique({ where: { id } })
 
 // Atomic claim: only one caller gets `true`, so only one worker ever talks to Duffel
