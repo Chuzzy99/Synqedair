@@ -15,6 +15,27 @@ type ConfirmedPayment = {
 
 export type PaymentOutcome = 'paid' | 'already_processed' | 'unknown_booking' | 'amount_mismatch'
 
+// 100 kobo = N1, to allow for rounding in the exchange rate
+const CONVERTED_TOLERANCE_MINOR = 100n
+
+type BookingForCheck = {
+  currency: string
+  chargeCurrency: string
+  totalMinor: number
+  exchangeRate: { toNumber: () => number } | null
+}
+
+// The least we should receive in the charge currency after the provider's fee
+const expectedNetMinor = (booking: BookingForCheck) => {
+  if (booking.chargeCurrency === booking.currency) return BigInt(booking.totalMinor)
+
+  if (booking.exchangeRate) {
+    return BigInt(Math.ceil(booking.totalMinor * booking.exchangeRate.toNumber())) - CONVERTED_TOLERANCE_MINOR
+  }
+
+  return null
+}
+
 /**
  * Called only after a provider has confirmed a payment.
  * Checks the money matches what we asked for, then marks the booking paid exactly once.
@@ -50,14 +71,15 @@ export const confirmBookingPayment = async (
 
   if (netReceivedMinor === null) {
     console.warn(`[RECEIPT] no fee details yet for ${booking.reference}`)
-  } else if (
-    booking.chargeCurrency === booking.currency &&
-    netReceivedMinor < BigInt(booking.totalMinor)
-  ) {
+  } else {
+    const expected = expectedNetMinor(booking)
+
     // We received less than airline + our fee + extras, so part of the service fee was lost
-    console.error(
-      `[MARGIN SHORTFALL] ${booking.reference}: received ${netReceivedMinor} but needed ${booking.totalMinor} ${booking.currency}`,
-    )
+    if (expected !== null && netReceivedMinor < expected) {
+      console.error(
+        `[MARGIN SHORTFALL] ${booking.reference}: received ${netReceivedMinor} but needed ${expected} ${booking.chargeCurrency}`,
+      )
+    }
   }
 
   return { outcome: 'paid', bookingId: booking.id }

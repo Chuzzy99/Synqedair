@@ -53,11 +53,13 @@ export const paystackWebhookController = asyncHandler(async (req: Request, res: 
   // 4. Match it to our booking and mark it paid, once
   console.log('[WEBHOOK] confirming payment', { reference, at: new Date().toISOString() })
 
-  const result = await confirmBookingPayment({
+   const result = await confirmBookingPayment({
     providerReference: reference,
     amountMinor: transaction.amountMinor,
     currency: transaction.currency,
     providerPaymentId: transaction.providerPaymentId,
+    providerFeeMinor: transaction.feeMinor,
+    netReceivedMinor: transaction.netMinor,
   })
 
   console.log('[WEBHOOK] confirm result', { reference, ...result, at: new Date().toISOString() })

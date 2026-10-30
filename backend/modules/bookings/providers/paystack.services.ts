@@ -1,5 +1,6 @@
-import { AppError } from '../../../utils/appError.js'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { env } from '../../../config/env.js'
+import { AppError } from '../../../utils/appError.js'
 
 const PAYSTACK_TIMEOUT_MS = 15000
 
@@ -16,10 +17,9 @@ type InitializeResponse = {
   message?: string
   data?: { authorization_url?: string; reference?: string }
 }
-import { createHmac, timingSafeEqual } from 'node:crypto'
 
 export const initializePaystackTransaction = async (input: InitializeInput) => {
-    const secret = env.PAYSTACK_SECRET_KEY
+  const secret = env.PAYSTACK_SECRET_KEY
   const amount = Number(input.amountMinor)
 
   if (!Number.isSafeInteger(amount) || amount <= 0) {
@@ -66,6 +66,7 @@ export const initializePaystackTransaction = async (input: InitializeInput) => {
     reference: body.data.reference ?? input.reference,
   }
 }
+
 export const verifyPaystackSignature = (rawBody: Buffer, signature: string | undefined) => {
   if (!signature) return false
 
@@ -84,6 +85,7 @@ type VerifyResponse = {
     status?: string
     amount?: number
     requested_amount?: number
+    fees?: number | null
     currency?: string
     reference?: string
   }
@@ -125,11 +127,17 @@ export const verifyPaystackTransaction = async (reference: string) => {
     throw new AppError('Could not verify the payment', 502)
   }
 
-   return {
+  // What Paystack took, in kobo. Missing means we simply don't record a receipt
+  const feeMinor = typeof data.fees === 'number' ? BigInt(data.fees) : null
+
+  return {
     status: data.status ?? 'unknown',
     // The amount we asked for. If a customer is made to pay Paystack's fee, `amount` includes it
     amountMinor: BigInt(data.requested_amount ?? data.amount),
     currency: data.currency,
     providerPaymentId: String(data.id),
+    feeMinor,
+    // What we receive: the total paid minus Paystack's fee. Correct whoever bears the fee
+    netMinor: feeMinor === null ? null : BigInt(data.amount) - feeMinor,
   }
 }
