@@ -74,6 +74,9 @@ export const sendRefundAlerts = async (): Promise<RefundAlertSummary> => {
       } else {
         summary.failed++
         await releaseRefundAlert(booking.id)
+        // The email provider is down or misconfigured, so don't hammer it with the rest.
+        // The next run tries again from the start
+        break
       }
     }
 
