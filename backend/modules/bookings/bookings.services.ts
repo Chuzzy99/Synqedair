@@ -8,6 +8,7 @@ import {
   createBookingWithReference,
   findPaidBookingForOffer,
   markBookingFailed,
+  saveProviderSessionId,
 } from './bookings.repo.js'
 import { getNgnQuote } from './fx.services.js'
 import { initializePaystackTransaction } from './providers/paystack.services.js'
@@ -151,6 +152,12 @@ export const initStripeBooking = async (input: InitBookingInput, userId?: string
       successUrl: bookingUrl,
       cancelUrl: `${bookingUrl}?payment=cancelled`,
     })
+
+    // Best effort: the webhook still finds the booking through client_reference_id,
+    // so a failed save must never stop the customer from paying
+    await saveProviderSessionId(booking.id, payment.sessionId).catch((error) =>
+      console.error(`Could not save Stripe session id for ${booking.reference}:`, error),
+    )
 
     return {
       reference: booking.reference,

@@ -55,6 +55,14 @@ export const markBookingFailed = (id: string, reason: string) =>
 export const findBookingByProviderReference = (providerReference: string) =>
   prisma.booking.findUnique({ where: { providerReference } })
 
+// Stripe's own id for the Checkout Session. A background job needs it to ask Stripe
+// about a payment whose webhook never arrived. Only fills it in once, never overwrites
+export const saveProviderSessionId = (id: string, providerSessionId: string) =>
+  prisma.booking.updateMany({
+    where: { id, providerSessionId: null },
+    data: { providerSessionId },
+  })
+
 // Only moves a booking that hasn't been paid yet, so a duplicate webhook changes nothing.
 // The receipt (what the provider took and what we received) is saved when it is already known
 export const markBookingPaid = (

@@ -100,6 +100,7 @@ model Booking {
   // Filled in when the payment is confirmed. Empty on bookings paid before this was added
   providerFeeMinor BigInt?
   netReceivedMinor BigInt?
+  providerSessionId String? @unique @map("provider_session_id")
   
 
   // Duffel, filled in after the order is created

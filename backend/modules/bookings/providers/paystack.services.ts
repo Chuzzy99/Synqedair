@@ -112,7 +112,10 @@ export const verifyPaystackTransaction = async (reference: string) => {
     clearTimeout(timer)
   }
 
-  if (response.status >= 400 && response.status < 500) return null
+  // Only a 404 means Paystack has never heard of this reference.
+  // A 401/403 (wrong key), 408 or 429 (rate limit) is OUR problem, not "no such payment".
+  // Those fall through to the error below, so the webhook returns 5xx and Paystack retries
+  if (response.status === 404) return null
 
   const body = (await response.json().catch(() => null)) as VerifyResponse | null
   const data = body?.data
